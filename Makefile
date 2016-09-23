@@ -8,6 +8,7 @@ CXX ?= g++
 SRC_EXT = cpp
 # Path to the source directory, relative to the makefile
 SRC_PATH = ./src
+TEST_PATH = ./test
 # Space-separated pkg-config libraries used by this project
 LIBS =
 # General compiler flags
@@ -196,6 +197,10 @@ clean:
 	@echo "Deleting directories"
 	@$(RM) -r build
 	@$(RM) -r bin
+
+.PHONY: test
+test:
+	$(MAKE) -C $(TEST_PATH) --no-print-directory
 
 # Main rule, checks the executable and symlinks to the output
 all: $(BIN_PATH)/$(BIN_NAME)

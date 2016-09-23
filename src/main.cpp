@@ -87,6 +87,8 @@ static void draw_all() {
 }
 
 int main(int argc, char **argv) {
+  Logger::init(Logger::createTerminal());
+
 	(void)argc; (void)argv;
 	int ret = tb_init();
 	if (ret) {

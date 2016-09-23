@@ -2,3 +2,4 @@
 bin/*
 build/*
 tetris
+test/tetris_test

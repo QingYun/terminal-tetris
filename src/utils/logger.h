@@ -6,12 +6,18 @@
 
 class Logger {
 private:
-  bool first_;
+  static std::ofstream global_dest_terminal_;
+
   std::ofstream& dest_terminal_;
   std::string delimiter_;
+  bool first_;
 
-public:
   Logger(std::ofstream& dest_terminal, const std::string& delimiter);
+public:
+  static void init(std::ofstream&& dest_terminal);
+  static std::ofstream createTerminal();
+  static Logger createLogger(const std::string& delimiter);
+
   ~Logger();
 
   template <typename T>
