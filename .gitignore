@@ -3,3 +3,4 @@ bin/*
 build/*
 tetris
 test/tetris_test
+.debug_time

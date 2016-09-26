@@ -5,23 +5,33 @@
 #include "./utils/logger.h"
 #include "./utils/immutable-struct.hpp"
 
-struct S_ {
-  // static constexpr bool default_ctr = false;
 
-  template <bool B = true, typename = std::enable_if_t<B>>
-  S_() { logger() << "constructor"; }
 
-  template <typename... T, typename = std::enable_if_t<sizeof...(T)>>
-  S_(T&&... args) {}
+struct S {
+  template <typename T, typename U>
+  void test(T t, U v, choice<1>, decltype(t == v)* = nullptr) {
+    logger() << "==";
+  }
 
-  void get() {}
-  void get() const {}
+  template <typename T, typename U>
+  void test(T t, U v, choice<0>, decltype(t != v)* = nullptr) {
+    logger() << "!=";
+  }
+
+  template <typename T, typename U>
+  void test(T t, U v, otherwise) {
+    logger() << "incomparable";
+  }
+
+  template <typename T, typename U>
+  void run(T t, U u) {
+    test(t, u, select_overload);
+  }
 };
 
 int main() {
   Logger::init(Logger::createTerminal());
-  logger() << std::is_default_constructible<S_>::value;
-  S_ s;
-  s.get();
+  S s;
+  s.run(12, 4);
   std::cin.get();
 }
