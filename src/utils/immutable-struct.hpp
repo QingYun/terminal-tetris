@@ -1,8 +1,10 @@
+#pragma once
 #include <memory>
 #include <tuple>
 #include <type_traits>
 #include <boost/preprocessor/seq.hpp>
 #include <boost/preprocessor/tuple.hpp>
+#include "./select-overload.hpp"
 
 #define IMMUTABLE_STRUCT_GET_TYPES_OP_(s, d, tuple) BOOST_PP_TUPLE_ELEM(0, tuple)
 #define IMMUTABLE_STRUCT_GET_TYPES_(tuple_seq) \
@@ -97,6 +99,18 @@
     enum class Field {IMMUTABLE_STRUCT_GET_FIELDS_(fields)}; \
   private: \
     std::shared_ptr<Tuple> pt_; \
+    template <typename T, typename U> \
+    bool is_equal_(T&& t, U&& u, choice<0>, decltype(t == u)* = nullptr) { \
+      return t == u; \
+    } \
+    template <typename T, typename U> \
+    bool is_equal_(T&& t, U&& u, choice<1>, decltype(t != u)* = nullptr) { \
+      return !(t != u); \
+    } \
+    template <typename T, typename U> \
+    bool is_equal_(T&&, U&&, otherwise) { \
+      return false; \
+    } \
   public: \
     template <bool B = IMMUTABLE_STRUCT_DEFAULT_CONSTRUCTIBLITY_(fields), \
               typename = std::enable_if_t<B>> \
@@ -105,22 +119,25 @@
     class_name(class_name&) = default; \
     class_name(class_name&&) = default; \
     class_name(const class_name&) = default; \
-    template <typename... Ts, typename = std::enable_if_t<sizeof...(Ts)>> \
-    class_name(Ts&&... args) \
+    template <typename... Ts, \
+      typename = std::enable_if_t<sizeof...(Ts) && \
+                                  std::is_constructible<Tuple, Ts...>::value>> \
+    explicit class_name(Ts&&... args) \
       : pt_(std::make_shared<Tuple>(std::forward<Ts>(args)...)) {} \
     template <Field F, typename T, \
               typename = std::enable_if_t< \
                 std::is_assignable< \
                   std::tuple_element_t<static_cast<std::size_t>(F), Tuple>&, \
                   T>::value>> \
-    void update(T&& v) { \
+    class_name& update(T&& v) { \
       constexpr std::size_t I = static_cast<std::size_t>(F); \
-      if (std::get<I>(*pt_) != v) { \
+      if (!is_equal_(std::get<I>(*pt_), v, select_overload_t{})) { \
         if (!pt_.unique()) { \
           pt_ = std::make_shared<Tuple>(*pt_); \
         } \
         std::get<I>(*pt_) = std::forward<T>(v); \
       } \
+      return *this; \
     } \
     template <Field F> \
     const std::tuple_element_t<static_cast<std::size_t>(F), Tuple>& get() const { \

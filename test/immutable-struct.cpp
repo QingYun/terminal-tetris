@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <type_traits>
-#include "utils/immutable-struct.hpp"
+#include "./utils/immutable-struct.hpp"
 
 struct C1 {
   std::string str_;
@@ -11,14 +11,10 @@ struct C1 {
   }
 };
 
-struct C2 {
-  std::unique_ptr<int> pi;
-};
-
 IMMUTABLE_STRUCT(S1, ((int, number))((std::unique_ptr<int>, pointer)));
 IMMUTABLE_STRUCT(S2, ((C1, obj)));
 IMMUTABLE_STRUCT(S3, ((int, number)));
-IMMUTABLE_STRUCT(S4, ((C1, obj, C1{"abc"}))((std::unique_ptr<int>, pointer)));
+IMMUTABLE_STRUCT(S4, ((C1, obj, C1{"abc"}))((std::shared_ptr<int>, pointer)));
 
 TEST(ImmutableStructTest, default_construction) {
   // default construct all fields
@@ -135,4 +131,26 @@ TEST(ImmutableStructTest, default_value) {
   EXPECT_TRUE(s);
   EXPECT_FALSE(s.get<S4::Field::pointer>());
   EXPECT_EQ(s.get<S4::Field::obj>().greet(), "Hello! abc");
+}
+
+TEST(ImmutableStructTest, chained_update) {
+  S4 s;
+  s
+    .update<S4::Field::obj>(C1{"abc"})
+    .update<S4::Field::pointer>(std::make_shared<int>(456));
+
+  EXPECT_EQ(s.get<S4::Field::obj>().greet(), "Hello! abc");
+  EXPECT_EQ(*s.get<S4::Field::pointer>(), 456);
+}
+
+TEST(ImmutableStructTest, assume_incomparable_values_differ) {
+  S2 s1{C1{"abc"}};
+  S2 s2 = s1;
+
+  EXPECT_EQ(s1, s2);
+  EXPECT_EQ(s1.get<S2::Field::obj>().greet(), "Hello! abc");
+
+  s1.update<S2::Field::obj>(C1{"abc"});
+  EXPECT_NE(s1, s2);
+  EXPECT_EQ(s1.get<S2::Field::obj>().greet(), "Hello! abc");
 }
