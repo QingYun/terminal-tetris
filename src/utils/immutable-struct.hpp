@@ -150,5 +150,13 @@
     bool operator != (const class_name& other) const { \
       return !(other == *this); \
     } \
+    class_name& operator = (const class_name& other) { \
+      pt_ = other.pt_; \
+      return *this; \
+    } \
+    class_name& operator = (class_name&& other) { \
+      pt_ = std::move(other.pt_); \
+      return *this; \
+    } \
     explicit operator bool() const { return !!pt_; } \
   }

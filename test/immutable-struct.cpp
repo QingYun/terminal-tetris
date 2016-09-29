@@ -65,6 +65,33 @@ TEST(ImmutableStructTest, move_construction) {
   EXPECT_EQ(*s2.get<S1::Field::pointer>(), 123);
 }
 
+TEST(ImmutableStructTest, copy_assignment) {
+  auto pt = std::make_unique<int>(123);
+  S1 s1{std::make_tuple(234, std::move(pt))}, s2;
+
+  EXPECT_FALSE(s2.get<S1::Field::pointer>());
+
+  s2 = s1;
+
+  EXPECT_TRUE(s1);
+  EXPECT_TRUE(s2);
+  EXPECT_EQ(s1, s2);
+}
+
+TEST(ImmutableStructTest, move_assignment) {
+  auto pt = std::make_unique<int>(123);
+  S1 s1{std::make_tuple(234, std::move(pt))}, s2;
+
+  EXPECT_FALSE(s2.get<S1::Field::pointer>());
+
+  s2 = std::move(s1);
+
+  EXPECT_FALSE(s1);
+  EXPECT_TRUE(s2);
+  EXPECT_EQ(s2.get<S1::Field::number>(), 234);
+  EXPECT_EQ(*s2.get<S1::Field::pointer>(), 123);
+}
+
 TEST(ImmutableStructTest, non_default_constructible) {
   // not default-constructible
   EXPECT_FALSE(std::is_default_constructible<S2>::value);
