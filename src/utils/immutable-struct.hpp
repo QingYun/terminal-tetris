@@ -6,6 +6,8 @@
 #include <boost/preprocessor/tuple.hpp>
 #include "./select-overload.hpp"
 
+struct TrivalConstruction_t {};
+
 #define IMMUTABLE_STRUCT_GET_TYPES_OP_(s, d, tuple) BOOST_PP_TUPLE_ELEM(0, tuple)
 #define IMMUTABLE_STRUCT_GET_TYPES_(tuple_seq) \
   BOOST_PP_SEQ_ENUM( \
@@ -112,6 +114,7 @@
       return false; \
     } \
   public: \
+    class_name(TrivalConstruction_t) {} \
     template <bool B = IMMUTABLE_STRUCT_DEFAULT_CONSTRUCTIBLITY_(fields), \
               typename = std::enable_if_t<B>> \
     class_name() \

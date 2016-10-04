@@ -16,6 +16,11 @@ IMMUTABLE_STRUCT(S2, ((C1, obj)));
 IMMUTABLE_STRUCT(S3, ((int, number)));
 IMMUTABLE_STRUCT(S4, ((C1, obj, C1{"abc"}))((std::shared_ptr<int>, pointer)));
 
+TEST(ImmutableStructTest, trivial_construction) {
+  S2 s{TrivalConstruction_t{}};
+  EXPECT_FALSE(s);
+}
+
 TEST(ImmutableStructTest, default_construction) {
   // default construct all fields
   S1 s;
