@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <typeinfo>
 #include <deque>
 #include <vector>

@@ -74,7 +74,7 @@ public:
 
   void render() {
     ChildrenCreator __E_CHILDREN_CREATOR;
-    details::ComponentRenderer<E> __RENDER_COMPONENT_E{this, __E_CHILDREN_CREATOR, [] (auto props) { return std::move(props); } };
+    details::ComponentRenderer<E> __RENDER_COMPONENT_E{this, __E_CHILDREN_CREATOR, [] (auto props) { return props; } };
     __E_CHILDREN_CREATOR = [this] (bool* trivial_creator, std::deque<std::shared_ptr<ComponentHolder>>* next_children) {
       if (*trivial_creator) { *trivial_creator = false; return; }
       for (auto it = std::rbegin(props_.get<Props::Field::children>()); it != std::rend(props_.get<Props::Field::children>()); ++it) {
@@ -87,7 +87,7 @@ public:
   }
 
   Props& getProps() { return props_; }
-  void setProps(Props&& next_props) { props_ = std::move(next_props); }
+  void setProps(Props&& next_props) { props_ = next_props; }
 };
 
 class C : public Component {
@@ -109,14 +109,14 @@ public:
     ChildrenCreator __D_CHILDREN_CREATOR;
     details::ComponentRenderer<D> __RENDER_COMPONENT_D{this, __D_CHILDREN_CREATOR, [this] (D::Props props) {
         props.update<D::Props::Field::number>(getProps().get<Props::Field::number>() * 2);
-        return std::move(props);
+        return props;
     }};
     __D_CHILDREN_CREATOR = [this] (bool* trivial_creator, Children* next_children) {
       if (*trivial_creator) { *trivial_creator = false; return; }
       ChildrenCreator __F_CHILDREN_CREATOR;
       details::ChildRenderer<F> __ADD_F_AS_CHILDREN{"F1", *next_children, __F_CHILDREN_CREATOR, [this] (F::Props props) {
         props.update<F::Props::Field::number>(getProps().get<Props::Field::number>() % 2 == 0 ? 2 : 1);
-        return std::move(props);
+        return props;
       }};
       __F_CHILDREN_CREATOR = [] (bool*, Children*) {};
 
