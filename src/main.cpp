@@ -9,14 +9,9 @@
 using namespace details;
 
 class F : public Component {
-public:
-  IMMUTABLE_STRUCT(Props,
+  DECL_PROPS(
     ((int, number))
-    ((Children, children))
   );
-
-private:
-  Props props_;
 
 public:
   F(Props props) : props_(std::move(props)) {
@@ -24,22 +19,14 @@ public:
   }
 
   void render() {
-    logger() << "F render " << props_.get<Props::Field::number>();
+    logger() << "F render " << PROPS(number);
   }
 
   void componentWillUpdate(const Props&) {}
-  Props& getProps() { return props_; }
-  void setProps(Props&& next_props) { props_ = std::move(next_props); }
 };
 
-class E : public Component {
-public:
-  IMMUTABLE_STRUCT(Props,
-    ((Children, children))
-  );
-
-private:
-  Props props_;
+class E : public EndComponent {
+  DECL_PROPS();
 
 public:
   E(Props props) : props_{std::move(props)} {
@@ -47,37 +34,27 @@ public:
   }
 
   void render() {
-    for (auto& pc : props_.get<Props::Field::children>()) {
+    for (auto& pc : PROPS(children)) {
       pc->render();
     }
   }
 
   void componentWillUpdate(const Props&) {}
-  Props& getProps() { return props_; }
-  void setProps(Props&& next_props) { props_ = std::move(next_props); }
 };
 
 class D : public Component {
-public:
-  IMMUTABLE_STRUCT(Props,
+  DECL_PROPS(
     ((int, number))
-    ((Children, children))
   );
-
-private:
-  Props props_;
-
 public:
   D(Props props) : props_{std::move(props)} {
     logger() << "D constructor";
   }
 
   void render() {
-    ChildrenCreator __E_CHILDREN_CREATOR;
-    details::ComponentRenderer<E> __RENDER_COMPONENT_E{this, __E_CHILDREN_CREATOR, [] (auto props) { return props; } };
-    __E_CHILDREN_CREATOR = [this] (bool* trivial_creator, std::deque<std::shared_ptr<ComponentHolder>>* next_children) {
+    COMPONENT(E, ATTRIBUTES()) {
       if (*trivial_creator) { *trivial_creator = false; return; }
-      for (auto it = std::rbegin(props_.get<Props::Field::children>()); it != std::rend(props_.get<Props::Field::children>()); ++it) {
+      for (auto it = std::rbegin(PROPS(children)); it != std::rend(PROPS(children)); ++it) {
         next_children->push_front(*it);
       }
     };
@@ -86,54 +63,27 @@ public:
   void componentWillUpdate(const Props&) {
   }
 
-  Props& getProps() { return props_; }
-  void setProps(Props&& next_props) { props_ = next_props; }
 };
 
 class C : public Component {
-public:
-  IMMUTABLE_STRUCT(Props,
+  DECL_PROPS(
     ((int, number))
-    ((Children, children))
   );
-
-private:
-  Props props_;
-
 public:
   C() {
     logger() << "C constructor";
   }
   void render() {
-    logger() << "C render " << props_.get<Props::Field::number>();
-    ChildrenCreator __D_CHILDREN_CREATOR;
-    details::ComponentRenderer<D> __RENDER_COMPONENT_D{this, __D_CHILDREN_CREATOR, [this] (D::Props props) {
-        props.update<D::Props::Field::number>(getProps().get<Props::Field::number>() * 2);
-        return props;
-    }};
-    __D_CHILDREN_CREATOR = [this] (bool* trivial_creator, Children* next_children) {
-      if (*trivial_creator) { *trivial_creator = false; return; }
-      ChildrenCreator __F_CHILDREN_CREATOR;
-      details::ChildRenderer<F> __ADD_F_AS_CHILDREN{"F1", *next_children, __F_CHILDREN_CREATOR, [this] (F::Props props) {
-        props.update<F::Props::Field::number>(getProps().get<Props::Field::number>() % 2 == 0 ? 2 : 1);
-        return props;
-      }};
-      __F_CHILDREN_CREATOR = [] (bool*, Children*) {};
-
-      if (*trivial_creator) { *trivial_creator = false; return; }
-      ChildrenCreator __F_CHILDREN_CREATOR2;
-      details::ChildRenderer<F> __ADD_F_AS_CHILDREN2{"F2", *next_children, __F_CHILDREN_CREATOR2, [this] (F::Props props) {
-        props.update<F::Props::Field::number>(getProps().get<Props::Field::number>());
-        return std::move(props);
-      }};
-      __F_CHILDREN_CREATOR2 = [] (bool*, Children*) {};
+    logger() << "C render " << PROPS(number);
+    COMPONENT(D, ATTRIBUTES(((number, PROPS(number) * 2)))) {
+      CHILD_COMPONENT(F, "F1", ATTRIBUTES(((number, PROPS(number) % 2 == 0 ? 2 : 1)))) { NO_CHILDREN };
+      CHILD_COMPONENT(F, "F2", ATTRIBUTES(((number, PROPS(number))))) { NO_CHILDREN };
     };
   }
+
   void componentWillUpdate(const Props&) {
   }
 
-  Props& getProps() { return props_; }
-  void setProps(Props&& next_props) { props_ = std::move(next_props); }
 };
 
 IMMUTABLE_STRUCT(State,

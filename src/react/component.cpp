@@ -8,7 +8,7 @@ namespace details {
 ComponentHolder::ComponentHolder(std::string id, std::size_t type_hash, Updater updater)
 : id_(id), component_type_hash_(type_hash), updater_(updater) {}
 
-bool ComponentHolder::calculateNextProps(Component *component) {
+bool ComponentHolder::calculateNextProps(ComponentBase *component) {
   return updater_(component, this);
 }
 
@@ -61,8 +61,8 @@ Children ComponentHolder::mergeChildren(Children next_children, const Children& 
 
 ComponentAccessor::ComponentAccessor(Component *pc) : pc_{pc} {}
 
-std::unique_ptr<Component>& ComponentAccessor::getNode() { return pc_->node_; }
-void ComponentAccessor::setNode(std::unique_ptr<Component> node) { pc_->node_ = std::move(node); }
+std::unique_ptr<ComponentBase>& ComponentAccessor::getNode() { return pc_->node_; }
+void ComponentAccessor::setNode(std::unique_ptr<ComponentBase> node) { pc_->node_ = std::move(node); }
 
 std::size_t ComponentAccessor::getType() { return pc_->node_type_; }
 void ComponentAccessor::setType(std::size_t node_type) { pc_->node_type_ = node_type; }
