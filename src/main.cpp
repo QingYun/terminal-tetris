@@ -1,31 +1,34 @@
 #include <string>
 #include <iostream>
 #include <type_traits>
-#include "./termbox/termbox.h"
 #include "./utils/logger.h"
 #include "./utils/immutable-struct.hpp"
 #include "./react/component.h"
+#include "./react/termbox.h"
+
+#include <cstring>
 
 using namespace details;
 
-class F : public Component {
+class F : public EndComponent<F> {
   DECL_PROPS(
     ((int, number))
+    ((int, row))
   );
 
 public:
   F(Props props) : props_(std::move(props)) {
     logger() << "F constructor";
   }
-
-  void render() {
-    logger() << "F render " << PROPS(number);
+  
+  void present(Canvas& canvas) {
+    canvas.writeString(4, PROPS(row), "Component F " + std::to_string(PROPS(number)), TB_RED, TB_WHITE);
   }
 
   void componentWillUpdate(const Props&) {}
 };
 
-class E : public EndComponent {
+class E : public EndComponent<E> {
   DECL_PROPS();
 
 public:
@@ -33,10 +36,8 @@ public:
     logger() << "E constructor";
   }
 
-  void render() {
-    for (auto& pc : PROPS(children)) {
-      pc->render();
-    }
+  void present(Canvas& canvas) {
+    canvas.writeString(0, 0, "Component E");
   }
 
   void componentWillUpdate(const Props&) {}
@@ -46,12 +47,8 @@ class D : public Component {
   DECL_PROPS(
     ((int, number))
   );
-public:
-  D(Props props) : props_{std::move(props)} {
-    logger() << "D constructor";
-  }
 
-  void render() {
+  void render_() {
     COMPONENT(E, ATTRIBUTES()) {
       if (*trivial_creator) { *trivial_creator = false; return; }
       for (auto it = std::rbegin(PROPS(children)); it != std::rend(PROPS(children)); ++it) {
@@ -60,30 +57,39 @@ public:
     };
   }
 
-  void componentWillUpdate(const Props&) {
+public:
+  D(Props props) : props_{std::move(props)} {
+    logger() << "D constructor";
   }
 
+  void componentWillUpdate(const Props&) {}
 };
 
 class C : public Component {
   DECL_PROPS(
     ((int, number))
   );
+
+  void render_() {
+    logger() << "C render " << PROPS(number);
+    COMPONENT(D, ATTRIBUTES(((number, PROPS(number) * 2)))) {
+      CHILD_COMPONENT(F, "F1", ATTRIBUTES(
+        ((number, PROPS(number) % 2 == 0 ? 2 : 1))
+        ((row, 1))
+      )) { NO_CHILDREN };
+      CHILD_COMPONENT(F, "F2", ATTRIBUTES(
+        ((number, PROPS(number)))
+        ((row, 2))
+      )) { NO_CHILDREN };
+    };
+  }
+
 public:
   C() {
     logger() << "C constructor";
   }
-  void render() {
-    logger() << "C render " << PROPS(number);
-    COMPONENT(D, ATTRIBUTES(((number, PROPS(number) * 2)))) {
-      CHILD_COMPONENT(F, "F1", ATTRIBUTES(((number, PROPS(number) % 2 == 0 ? 2 : 1)))) { NO_CHILDREN };
-      CHILD_COMPONENT(F, "F2", ATTRIBUTES(((number, PROPS(number))))) { NO_CHILDREN };
-    };
-  }
 
-  void componentWillUpdate(const Props&) {
-  }
-
+  void componentWillUpdate(const Props&) {}
 };
 
 IMMUTABLE_STRUCT(State,
@@ -196,6 +202,7 @@ public:
 };
 
 int main() {
+  Termbox tb{TB_OUTPUT_NORMAL};
   Logger::init(Logger::createTerminal());
   C root{};
   Store<State> store;
@@ -204,15 +211,40 @@ int main() {
     next_props.update<C::Props::Field::number>(
         next_state.get<State::Field::number1>() + next_state.get<State::Field::number2>());
     if (next_props != root.getProps()) {
-      root.componentWillUpdate(next_props);
-      root.setProps(std::move(next_props));
-      root.render();
+      ::details::renderComponent<C>(&root, std::move(next_props));
     }
   });
+  auto canvas = tb.getCanvas();
   store.dispatch<Action::SET_NUMBER2>(1);
+  root.present(canvas, false);
+  canvas.present();
   store.dispatch<Action::SET_NUMBER1>(10);
+  root.present(canvas, false);
+  canvas.present();
   store.dispatch<Action::INCREASE_NUMBER1>();
+  root.present(canvas, false);
+  canvas.present();
   store.dispatch<Action::INCREASE_NUMBER2>();
+  root.present(canvas, false);
+  canvas.present();
   store.dispatch<Action::INCREASE_NUMBER>();
-  std::cin.get();
+  root.present(canvas, false);
+  canvas.present();
+  
+	struct tb_event ev;
+	while (tb_poll_event(&ev)) {
+      switch (ev.type) {
+      case TB_EVENT_KEY:
+        switch (ev.key) {
+        case TB_KEY_ESC:
+          goto done;
+          break;
+        }
+        break;
+      case TB_EVENT_RESIZE:
+        break;
+      }
+    }
+  done:
+  ;
 }

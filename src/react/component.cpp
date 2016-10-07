@@ -3,6 +3,20 @@
 
 ComponentBase::~ComponentBase() {}
 
+void ComponentBase::render() {
+  render_();
+  updated_ = true;
+}
+
+void ComponentBase::present(Canvas& canvas, bool parent_updated) {
+  present_(canvas, parent_updated);
+  updated_ = false;
+}
+
+void Component::present_(Canvas& canvas, bool parent_updated) {
+  node_->present(canvas, parent_updated || updated_);
+}
+
 namespace details {
 
 ComponentHolder::ComponentHolder(std::string id, std::size_t type_hash, Updater updater)

@@ -7,23 +7,60 @@
 #include <algorithm>
 
 #include "../utils/immutable-struct.hpp"
+#include "./canvas.h"
 
 class ComponentBase {
+private:  
+  virtual void render_() = 0;
+  virtual void present_(Canvas&, bool) = 0;
+
+protected:
+  // need to redraw? set by render() and clear by present()
+  bool updated_;
+
 public:
   virtual ~ComponentBase();
-  virtual void render() = 0;
+  // generate / update child components to reflect the current props & state
+  void render();
+  // draw on canvas. Decide whether to actually draw something based on this->updated_ and parent_updated
+  void present(Canvas& canvas, bool parent_updated);
 };
 
 namespace details { class ComponentAccessor; }
 
 class Component : public ComponentBase {
+private:
+  void present_(Canvas&, bool);
 public:
   std::size_t node_type_;
   std::unique_ptr<ComponentBase> node_;
   friend class details::ComponentAccessor;
 };
 
-class EndComponent : public ComponentBase {};
+template <typename T>
+class EndComponent : public ComponentBase {
+private:
+  void render_() {
+    T* self = dynamic_cast<T*>(this);  
+    for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
+      pc->render();
+    }
+  }
+  
+  void present_(Canvas& canvas, bool parent_updated) {
+    T* self = dynamic_cast<T*>(this);  
+    bool should_redraw = parent_updated || updated_;
+
+    // we are pure !
+    if (should_redraw) {
+      self->present(canvas);
+    }
+
+    for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
+      pc->present(canvas, should_redraw);
+    }
+  }
+};
 
 namespace details {
 
@@ -75,15 +112,7 @@ class ComponentHolderT : public ComponentHolder {
 private:
   typename T::Props next_props_;
 
-public:
-  ComponentHolderT(std::string id, Updater updater)
-  : ComponentHolder{id, typeid(T).hash_code(), std::move(updater)}, next_props_{TrivalConstruction_t{}} {}
-
-  void setNextProps(typename T::Props next_props) {
-    next_props_ = std::move(next_props);
-  }
-
-  void render() override {
+  void render_() override {
     if (!component_) {
       calculateNextProps(nullptr);
       component_ = createComponent<T>(std::move(next_props_));
@@ -93,6 +122,18 @@ public:
       renderComponent<T>(component_.get(), std::move(next_props_));
       return;
     }
+  }
+  
+  void present_(Canvas& canvas, bool parent_updated) override {
+    if (component_) component_->present(canvas, parent_updated);
+  }
+
+public:
+  ComponentHolderT(std::string id, Updater updater)
+  : ComponentHolder{id, typeid(T).hash_code(), std::move(updater)}, next_props_{TrivalConstruction_t{}} {}
+
+  void setNextProps(typename T::Props next_props) {
+    next_props_ = std::move(next_props);
   }
 };
 
@@ -220,7 +261,7 @@ public:
 #define __DETAILS_PROPS_UPDATER_OP(s, prefix, tuple) \
   props.template update<prefix::BOOST_PP_TUPLE_ELEM(0, tuple)>(BOOST_PP_TUPLE_ELEM(1, tuple));
 #define __DETAILS_PROPS_UPDATER(attr) [this] (auto props) { \
-    BOOST_PP_SEQ_CAT(BOOST_PP_SEQ_TRANSFORM(__DETAILS_PROPS_UPDATER_OP, decltype(props)::Field, attr)) \
+    BOOST_PP_SEQ_FOR_EACH(__DETAILS_PROPS_UPDATER_OP, decltype(props)::Field, attr) \
     return props; \
   }
 #define __DETAILS_EMPTY_PROPS_UPDATER(attr) [] (auto props) { return props; }
