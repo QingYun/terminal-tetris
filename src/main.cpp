@@ -10,14 +10,15 @@
 
 using namespace details;
 
-class F : public EndComponent<F> {
+template <typename StoreT>
+class F : public EndComponent<F<StoreT>> {
   DECL_PROPS(
     ((int, number))
     ((int, row))
   );
 
 public:
-  F(Props props) : props_(std::move(props)) {
+  F(Props props, StoreT&) : props_(std::move(props)) {
     logger() << "F constructor";
   }
   
@@ -28,11 +29,12 @@ public:
   void componentWillUpdate(const Props&) {}
 };
 
-class E : public EndComponent<E> {
+template <typename StoreT>
+class E : public EndComponent<E<StoreT>> {
   DECL_PROPS();
 
 public:
-  E(Props props) : props_{std::move(props)} {
+  E(Props props, StoreT&) : props_{std::move(props)} {
     logger() << "E constructor";
   }
 
@@ -43,7 +45,8 @@ public:
   void componentWillUpdate(const Props&) {}
 };
 
-class D : public Component {
+template <typename StoreT>
+class D : public Component<StoreT> {
   DECL_PROPS(
     ((int, number))
   );
@@ -58,14 +61,15 @@ class D : public Component {
   }
 
 public:
-  D(Props props) : props_{std::move(props)} {
+  D(Props props, StoreT& store) : Component<StoreT>{store}, props_{std::move(props)} {
     logger() << "D constructor";
   }
 
   void componentWillUpdate(const Props&) {}
 };
 
-class C : public Component {
+template <typename StoreT>
+class C : public Component<StoreT> {
   DECL_PROPS(
     ((int, number))
   );
@@ -85,12 +89,14 @@ class C : public Component {
   }
 
 public:
-  C() {
+  C(Props props, StoreT& store) : Component<StoreT>{store}, props_{std::move(props)} {
     logger() << "C constructor";
   }
 
   void componentWillUpdate(const Props&) {}
 };
+
+template <typename T, T V> class EnumValue {};
 
 IMMUTABLE_STRUCT(State,
   ((int, number1))
@@ -103,23 +109,29 @@ enum class Action {
   INCREASE_NUMBER1,
   SET_NUMBER2,
   INCREASE_NUMBER2,
-  INCREASE_NUMBER
+  INCREASE_NUMBER,
+  SET
 };
 
-template <Action>
+enum class Target {
+  NUMBER1,
+  NUMBER2
+};
+
+template <typename...>
 class number1Reducer {
 public:
   static int reduce(int state, ...) { return state; }
 };
 
 template <>
-class number1Reducer<Action::INIT> {
+class number1Reducer<EnumValue<decltype(Action::INIT), Action::INIT>> {
 public:
   static int reduce() { return 0; }
 };
 
 template <>
-class number1Reducer<Action::SET_NUMBER1> {
+class number1Reducer<EnumValue<decltype(Action::SET), Action::SET>, EnumValue<Target, Target::NUMBER1>> {
 public:
   static int reduce(int, int payload) {
     return payload;
@@ -127,7 +139,7 @@ public:
 };
 
 template <>
-class number1Reducer<Action::INCREASE_NUMBER1> {
+class number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER1), Action::INCREASE_NUMBER1>> {
 public:
   static int reduce(int state) {
     return state + 1;
@@ -135,22 +147,23 @@ public:
 };
 
 template <>
-class number1Reducer<Action::INCREASE_NUMBER> : public number1Reducer<Action::INCREASE_NUMBER1> {};
+class number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER), Action::INCREASE_NUMBER>> : 
+  public number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER1), Action::INCREASE_NUMBER1>> {};
 
-template <Action>
+template <typename...>
 class number2Reducer {
 public:
   static int reduce(int state, ...) { return state; }
 };
 
 template <>
-class number2Reducer<Action::INIT> {
+class number2Reducer<EnumValue<Action, Action::INIT>> {
 public:
   static int reduce() { return 0; }
 };
 
 template <>
-class number2Reducer<Action::SET_NUMBER2> {
+class number2Reducer<EnumValue<Action, Action::SET_NUMBER2>> {
 public:
   static int reduce(int, int payload) {
     return payload;
@@ -158,7 +171,7 @@ public:
 };
 
 template <>
-class number2Reducer<Action::INCREASE_NUMBER2> {
+class number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER2>> {
 public:
   static int reduce(int state) {
     return state + 1;
@@ -166,7 +179,7 @@ public:
 };
 
 template <>
-class number2Reducer<Action::INCREASE_NUMBER> : public number2Reducer<Action::INCREASE_NUMBER2> {};
+class number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER>> : public number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER2>> {};
 
 template <typename StateT>
 class Store {
@@ -177,15 +190,15 @@ private:
   StateT state_;
   std::vector<Listener> listeners_;
 public:
-  Store() : state_{number1Reducer<Action::INIT>::reduce(), number2Reducer<Action::INIT>::reduce()} {}
+  Store() : state_{number1Reducer<EnumValue<Action, Action::INIT>>::reduce(), number2Reducer<EnumValue<Action, Action::INIT>>::reduce()} {}
 
-  template <Action A, typename... Ts>
+  template <typename... Vs, typename... Ts>
   void dispatch(const Ts&... payload) {
     StateT next_state = state_;
     next_state.template update<StateT::Field::number1>(
-      number1Reducer<A>::reduce(state_.template get<StateT::Field::number1>(), payload...));
+      number1Reducer<Vs...>::reduce(state_.template get<StateT::Field::number1>(), payload...));
     next_state.template update<StateT::Field::number2>(
-      number2Reducer<A>::reduce(state_.template get<StateT::Field::number2>(), payload...));
+      number2Reducer<Vs...>::reduce(state_.template get<StateT::Field::number2>(), payload...));
 
     if (next_state != state_) {
       for (auto& listener : listeners_) {
@@ -202,32 +215,32 @@ public:
 };
 
 int main() {
-  Termbox tb{TB_OUTPUT_NORMAL};
   Logger::init(Logger::createTerminal());
-  C root{};
+  Termbox tb{TB_OUTPUT_NORMAL};
   Store<State> store;
+  C<Store<State>> root{C<Store<State>>::Props{}, store};
   store.addListener([&root](const State &, const State &next_state) {
     auto next_props = root.getProps();
-    next_props.update<C::Props::Field::number>(
+    next_props.update<C<Store<State>>::Props::Field::number>(
         next_state.get<State::Field::number1>() + next_state.get<State::Field::number2>());
     if (next_props != root.getProps()) {
-      ::details::renderComponent<C>(&root, std::move(next_props));
+      ::details::renderComponent<C<Store<State>>>(&root, std::move(next_props));
     }
   });
-  auto canvas = tb.getCanvas();
-  store.dispatch<Action::SET_NUMBER2>(1);
+  auto& canvas = tb.getCanvas();
+  store.dispatch<EnumValue<decltype(Action::SET_NUMBER2), Action::SET_NUMBER2>>(1);
   root.present(canvas, false);
   canvas.present();
-  store.dispatch<Action::SET_NUMBER1>(10);
+  store.dispatch<EnumValue<Action, Action::SET>, EnumValue<Target, Target::NUMBER1>>(10);
   root.present(canvas, false);
   canvas.present();
-  store.dispatch<Action::INCREASE_NUMBER1>();
+  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER1>>();
   root.present(canvas, false);
   canvas.present();
-  store.dispatch<Action::INCREASE_NUMBER2>();
+  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER2>>();
   root.present(canvas, false);
   canvas.present();
-  store.dispatch<Action::INCREASE_NUMBER>();
+  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER>>();
   root.present(canvas, false);
   canvas.present();
   

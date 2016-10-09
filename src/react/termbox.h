@@ -1,4 +1,5 @@
 #pragma once
+#include "./provider.h"
 #include "../termbox/termbox.h"
 #include "./canvas.h"
 
@@ -18,11 +19,14 @@ public:
   friend class Termbox;
 };
 
-class Termbox {
+class Termbox : public Provider {
+private:
+  TermboxCanvas canvas_;
+  
 public:
   // tb_init() + tb_select_output_mode()
   Termbox(int output_mode = TB_OUTPUT_256);
   ~Termbox();
   
-  TermboxCanvas getCanvas() const;
+  Canvas& getCanvas() override;
 };

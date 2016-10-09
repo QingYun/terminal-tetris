@@ -25,7 +25,7 @@ void TermboxCanvas::present() {
   tb_present();
 }
 
-Termbox::Termbox(int output_mode) {
+Termbox::Termbox(int output_mode) : canvas_{} {
   int ret = tb_init(); 
   if (ret) {
     // -2 in VS Code debugger
@@ -39,6 +39,6 @@ Termbox::~Termbox() {
   tb_shutdown();
 }
 
-TermboxCanvas Termbox::getCanvas() const {
-  return TermboxCanvas{};
+Canvas& Termbox::getCanvas() {
+  return canvas_;
 }

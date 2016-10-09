@@ -13,10 +13,6 @@ void ComponentBase::present(Canvas& canvas, bool parent_updated) {
   updated_ = false;
 }
 
-void Component::present_(Canvas& canvas, bool parent_updated) {
-  node_->present(canvas, parent_updated || updated_);
-}
-
 namespace details {
 
 ComponentHolder::ComponentHolder(std::string id, std::size_t type_hash, Updater updater)
@@ -72,13 +68,5 @@ Children ComponentHolder::mergeChildren(Children next_children, const Children& 
   }
   return next_children;
 }
-
-ComponentAccessor::ComponentAccessor(Component *pc) : pc_{pc} {}
-
-std::unique_ptr<ComponentBase>& ComponentAccessor::getNode() { return pc_->node_; }
-void ComponentAccessor::setNode(std::unique_ptr<ComponentBase> node) { pc_->node_ = std::move(node); }
-
-std::size_t ComponentAccessor::getType() { return pc_->node_type_; }
-void ComponentAccessor::setType(std::size_t node_type) { pc_->node_type_ = node_type; }
 
 }
