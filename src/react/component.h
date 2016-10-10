@@ -11,7 +11,7 @@
 #include "./canvas.h"
 
 class ComponentBase {
-private:  
+private:
   virtual void render_() = 0;
   virtual void present_(Canvas&, bool) = 0;
 
@@ -50,14 +50,14 @@ template <typename T>
 class EndComponent : public ComponentBase {
 private:
   void render_() {
-    T* self = dynamic_cast<T*>(this);  
+    T* self = dynamic_cast<T*>(this);
     for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
       pc->render();
     }
   }
-  
+
   void present_(Canvas& canvas, bool parent_updated) {
-    T* self = dynamic_cast<T*>(this);  
+    T* self = dynamic_cast<T*>(this);
     bool should_redraw = parent_updated || updated_;
 
     // we are pure !
@@ -78,9 +78,9 @@ using Child = std::shared_ptr<ComponentHolder>;
 using Children = std::deque<Child>;
 using ChildrenCreator = std::function<void(bool*, Children*)>;
 
-template <typename T> 
-void renderComponent(ComponentBase *component, typename T::Props next_props) {
-  T* target = dynamic_cast<T*>(component);
+template <typename T>
+void renderComponent(ComponentBase& component, typename T::Props next_props) {
+  T* target = dynamic_cast<T*>(&component);
   target->componentWillUpdate(next_props);
   target->setProps(std::move(next_props));
   target->render();
@@ -112,7 +112,7 @@ protected:
 
 public:
   ComponentHolder(std::string id, std::size_t type_hash, Updater updater);
-  bool calculateNextProps(ComponentBase *component); 
+  bool calculateNextProps(ComponentBase *component);
   static Children mergeChildren(Children next_children, const Children& prev_children);
 };
 
@@ -129,11 +129,11 @@ private:
       return;
     }
     if (next_props_) {
-      renderComponent<ChildT>(component_.get(), std::move(next_props_));
+      renderComponent<ChildT>(*component_.get(), std::move(next_props_));
       return;
     }
   }
-  
+
   void present_(Canvas& canvas, bool parent_updated) override {
     if (component_) component_->present(canvas, parent_updated);
   }
@@ -156,10 +156,10 @@ public:
 
   std::unique_ptr<ComponentBase>& getNode() const { return pc_->node_; }
   void setNode(std::unique_ptr<ComponentBase> node) { pc_->node_ = std::move(node); }
-  
+
   std::size_t getType() const { return pc_->node_type_; }
   void setType(std::size_t node_type) { pc_->node_type_ = node_type; }
-  
+
   T& getStore() const { return pc_->store_; }
 };
 
@@ -167,11 +167,11 @@ template <typename T>
 class ComponentRendererHelper {
 public:
   using Props = typename T::Props;
-  
+
 private:
   const ChildrenCreator& children_creator_;
   std::function<Props(Props)> props_updater_;
-  
+
 public:
   ComponentRendererHelper(const ChildrenCreator& children_creator, std::function<Props(Props)> props_updater)
   : children_creator_{children_creator}, props_updater_{props_updater} {}
@@ -200,11 +200,11 @@ private:
 
   ComponentRendererHelper<ChildT> helper_;
   ComponentAccessor<StoreT> parent_;
-  
+
 public:
-  ComponentRenderer(Component<StoreT>* parent, ChildrenCreator& children_creator, std::function<Props(Props)> props_updater) 
+  ComponentRenderer(Component<StoreT>* parent, ChildrenCreator& children_creator, std::function<Props(Props)> props_updater)
   : helper_{children_creator, props_updater}, parent_{parent} {}
-  
+
   ~ComponentRenderer() {
     if (typeid(ChildT).hash_code() != parent_.getType() || !parent_.getNode()) {
       // a different type component needed or no component existing at all
@@ -216,7 +216,7 @@ public:
     ChildT* target = dynamic_cast<ChildT*>(parent_.getNode().release());
     auto next_props = helper_.updateProps(target->getProps());
     if (next_props != target->getProps()) {
-      renderComponent<ChildT>(target, std::move(next_props));
+      renderComponent<ChildT>(*target, std::move(next_props));
     }
     parent_.setNode(std::unique_ptr<ComponentBase>{target});
   }
@@ -226,22 +226,22 @@ template <typename ChildT, typename StoreT>
 class ChildRenderer {
 private:
   using Props = typename ComponentRendererHelper<ChildT>::Props;
-  
+
   ChildrenCreator& children_creator_;
   std::function<Props(Props)> props_updater_;
   std::string id_;
   Children& next_children_;
   StoreT& store_;
-  
+
 public:
-  ChildRenderer(std::string id, Children& next_children, ChildrenCreator& children_creator, 
+  ChildRenderer(std::string id, Children& next_children, ChildrenCreator& children_creator,
                 std::function<Props(Props)> props_updater, StoreT& store)
-  : children_creator_{children_creator}, props_updater_{props_updater}, 
+  : children_creator_{children_creator}, props_updater_{props_updater},
     id_{id}, next_children_{next_children}, store_{store} {}
-  
+
   ~ChildRenderer() {
     next_children_.emplace_front(new ComponentHolderT<ChildT, StoreT>{id_, store_,
-      [c{std::move(children_creator_)}, u{std::move(props_updater_)}] 
+      [c{std::move(children_creator_)}, u{std::move(props_updater_)}]
       (ComponentBase *pc, ComponentHolder *ph) {
         ComponentRendererHelper<ChildT> helper{c, std::ref(u)};
         auto component = dynamic_cast<ChildT*>(pc);
@@ -266,7 +266,7 @@ public:
     void setProps(Props next_props) { props_ = ::std::move(next_props); } \
   private: \
     Props props_
-    
+
 #define PROPS(field) this->getProps().template get<Props::Field::field>()
 
 #define __DETAILS_CHILDREN_CREATOR_NAME(C) BOOST_PP_CAT(__, BOOST_PP_CAT(C, BOOST_PP_CAT(__LINE__, CHILDREN_CREATOR__)))
@@ -289,7 +289,7 @@ public:
     this, __DETAILS_CHILDREN_CREATOR_NAME(C), attr \
   }; \
   __DETAILS_CHILDREN_CREATOR_NAME(C) = [this] (bool *trivial_creator, Children *next_children)
-  
+
 #define CHILD_COMPONENT(C, id, attr) \
   if (*trivial_creator) { *trivial_creator = false; return; } \
   ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \

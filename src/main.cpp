@@ -21,7 +21,7 @@ public:
   F(Props props, StoreT&) : props_(std::move(props)) {
     logger() << "F constructor";
   }
-  
+
   void present(Canvas& canvas) {
     canvas.writeString(4, PROPS(row), "Component F " + std::to_string(PROPS(number)), TB_RED, TB_WHITE);
   }
@@ -39,6 +39,7 @@ public:
   }
 
   void present(Canvas& canvas) {
+    logger() << "E present";
     canvas.writeString(0, 0, "Component E");
   }
 
@@ -147,7 +148,7 @@ public:
 };
 
 template <>
-class number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER), Action::INCREASE_NUMBER>> : 
+class number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER), Action::INCREASE_NUMBER>> :
   public number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER1), Action::INCREASE_NUMBER1>> {};
 
 template <typename...>
@@ -185,6 +186,7 @@ template <typename StateT>
 class Store {
 public:
   using Listener = std::function<void(const StateT&, const StateT&)>;
+  using StateType = StateT;
 
 private:
   StateT state_;
@@ -208,8 +210,8 @@ public:
     state_ = std::move(next_state);
   }
 
-  void addListener(Listener listener) {
-    listener(state_, state_);
+  void addListener(Listener listener, bool immediate_call = true) {
+    if (immediate_call) listener(state_, state_);
     listeners_.push_back(std::move(listener));
   }
 };
@@ -218,46 +220,29 @@ int main() {
   Logger::init(Logger::createTerminal());
   Termbox tb{TB_OUTPUT_NORMAL};
   Store<State> store;
-  C<Store<State>> root{C<Store<State>>::Props{}, store};
-  store.addListener([&root](const State &, const State &next_state) {
-    auto next_props = root.getProps();
-    next_props.update<C<Store<State>>::Props::Field::number>(
-        next_state.get<State::Field::number1>() + next_state.get<State::Field::number2>());
-    if (next_props != root.getProps()) {
-      ::details::renderComponent<C<Store<State>>>(&root, std::move(next_props));
-    }
-  });
-  auto& canvas = tb.getCanvas();
-  store.dispatch<EnumValue<decltype(Action::SET_NUMBER2), Action::SET_NUMBER2>>(1);
-  root.present(canvas, false);
-  canvas.present();
-  store.dispatch<EnumValue<Action, Action::SET>, EnumValue<Target, Target::NUMBER1>>(10);
-  root.present(canvas, false);
-  canvas.present();
-  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER1>>();
-  root.present(canvas, false);
-  canvas.present();
-  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER2>>();
-  root.present(canvas, false);
-  canvas.present();
-  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER>>();
-  root.present(canvas, false);
-  canvas.present();
-  
-	struct tb_event ev;
-	while (tb_poll_event(&ev)) {
-      switch (ev.type) {
-      case TB_EVENT_KEY:
-        switch (ev.key) {
-        case TB_KEY_ESC:
-          goto done;
-          break;
-        }
-        break;
-      case TB_EVENT_RESIZE:
-        break;
+
+  std::function<void(const State&, C<Store<State>>&)> updater =
+  [] (const State& state, C<Store<State>>& root_elm) {
+      auto next_props = root_elm.getProps();
+      next_props.update<C<Store<State>>::Props::Field::number>(
+        state.get<State::Field::number1>() + state.get<State::Field::number2>()
+      );
+      if (next_props != root_elm.getProps()) {
+        logger() << "rendering root";
+        details::renderComponent<C<Store<State>>>(root_elm, std::move(next_props));
       }
-    }
-  done:
-  ;
+    };
+
+  tb.render<C>(store, updater,
+    [] (const State& state) {
+      return state.get<State::Field::number1>() + state.get<State::Field::number2>() > 99;
+    });
+
+  store.dispatch<EnumValue<decltype(Action::SET_NUMBER2), Action::SET_NUMBER2>>(1);
+  store.dispatch<EnumValue<Action, Action::SET>, EnumValue<Target, Target::NUMBER1>>(10);
+  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER1>>();
+  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER2>>();
+  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER>>();
+
+  tb.runMainLoop();
 }
