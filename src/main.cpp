@@ -39,7 +39,6 @@ public:
   }
 
   void present(Canvas& canvas) {
-    logger() << "E present";
     canvas.writeString(0, 0, "Component E");
   }
 
@@ -53,11 +52,8 @@ class D : public Component<StoreT> {
   );
 
   void render_() {
-    COMPONENT(E, ATTRIBUTES()) {
-      if (*trivial_creator) { *trivial_creator = false; return; }
-      for (auto it = std::rbegin(PROPS(children)); it != std::rend(PROPS(children)); ++it) {
-        next_children->push_front(*it);
-      }
+    RENDER_COMPONENT(E, ATTRIBUTES()) {
+      RENDER_COMPONENT(PROPS(children));
     };
   }
 
@@ -77,12 +73,12 @@ class C : public Component<StoreT> {
 
   void render_() {
     logger() << "C render " << PROPS(number);
-    COMPONENT(D, ATTRIBUTES(((number, PROPS(number) * 2)))) {
-      CHILD_COMPONENT(F, "F1", ATTRIBUTES(
+    RENDER_COMPONENT(D, ATTRIBUTES(((number, PROPS(number) * 2)))) {
+      RENDER_COMPONENT(F, "F1", ATTRIBUTES(
         ((number, PROPS(number) % 2 == 0 ? 2 : 1))
         ((row, 1))
       )) { NO_CHILDREN };
-      CHILD_COMPONENT(F, "F2", ATTRIBUTES(
+      RENDER_COMPONENT(F, "F2", ATTRIBUTES(
         ((number, PROPS(number)))
         ((row, 2))
       )) { NO_CHILDREN };

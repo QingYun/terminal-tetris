@@ -257,6 +257,29 @@ public:
   }
 };
 
+template <typename VecT>
+class ArrayRenderer {
+private:
+  Children& next_children_;
+  VecT components_;
+
+public:
+  ArrayRenderer(Children& next_children, VecT components)
+  : next_children_{next_children}, components_{std::move(components)} {}
+
+  ~ArrayRenderer() {
+    for (auto it = std::rbegin(components_); it != std::rend(components_); ++it) {
+      next_children_.emplace_front(std::move(*it));
+    }
+  }
+};
+
+template <typename VecT>
+ArrayRenderer<VecT> createArrayRender(Children& next_children, VecT&& components) {
+  VecT copy_components{std::forward<VecT>(components)};
+  return ArrayRenderer<VecT>{next_children, std::move(copy_components)};
+}
+
 }
 
 #define DECL_PROPS(fields) \
@@ -271,6 +294,7 @@ public:
 
 #define __DETAILS_CHILDREN_CREATOR_NAME(C) BOOST_PP_CAT(__, BOOST_PP_CAT(C, BOOST_PP_CAT(__LINE__, CHILDREN_CREATOR__)))
 #define __DETAILS_COMPONENT_RENDERER_NAME(C) BOOST_PP_CAT(__, BOOST_PP_CAT(C, BOOST_PP_CAT(__LINE__, COMPONENT_RENDERER__)))
+#define __DETAILS_ARRAY_RENDERER_NAME BOOST_PP_CAT(__, BOOST_PP_CAT(__LINE__, ARRAY_RENDERER))
 
 #define __DETAILS_PROPS_UPDATER_OP(s, prefix, tuple) \
   props.template update<prefix::BOOST_PP_TUPLE_ELEM(0, tuple)>(BOOST_PP_TUPLE_ELEM(1, tuple));
@@ -283,14 +307,14 @@ public:
 #define ATTRIBUTES(attr) \
   BOOST_PP_IF(BOOST_PP_SEQ_SIZE(attr), __DETAILS_PROPS_UPDATER, __DETAILS_EMPTY_PROPS_UPDATER)(attr) \
 
-#define COMPONENT(C, attr) \
+#define RENDER_MAIN_COMPONENT(C, attr) \
   ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \
   details::ComponentRenderer<C<StoreT>, StoreT> __DETAILS_COMPONENT_RENDERER_NAME(C) { \
     this, __DETAILS_CHILDREN_CREATOR_NAME(C), attr \
   }; \
   __DETAILS_CHILDREN_CREATOR_NAME(C) = [this] (bool *trivial_creator, Children *next_children)
 
-#define CHILD_COMPONENT(C, id, attr) \
+#define RENDER_CHILD_COMPONENT(C, id, attr) \
   if (*trivial_creator) { *trivial_creator = false; return; } \
   ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \
   details::ChildRenderer<C<StoreT>, StoreT> __DETAILS_COMPONENT_RENDERER_NAME(C) { \
@@ -298,5 +322,15 @@ public:
     details::ComponentAccessor<StoreT>{this}.getStore() \
   }; \
   __DETAILS_CHILDREN_CREATOR_NAME(C) = [this] (bool *trivial_creator, Children *next_children)
+
+#define RENDER_COMPONENT_ARRAY(arr) \
+  if (*trivial_creator) { *trivial_creator = false; return; } \
+  auto __DETAILS_ARRAY_RENDERER_NAME = details::createArrayRender(*next_children, arr)
+
+#define RENDER_COMPONENT(...) \
+  BOOST_PP_IF(BOOST_PP_EQUAL(1, BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)), RENDER_COMPONENT_ARRAY, \
+  BOOST_PP_IF(BOOST_PP_EQUAL(2, BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)), RENDER_MAIN_COMPONENT, \
+  BOOST_PP_IF(BOOST_PP_EQUAL(3, BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)), RENDER_CHILD_COMPONENT, \
+  BOOST_PP_EMPTY)))(__VA_ARGS__)
 
 #define NO_CHILDREN do { (void)trivial_creator; (void)next_children; } while(0);
