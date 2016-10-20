@@ -10,15 +10,14 @@
 
 using namespace details;
 
-template <typename StoreT>
-class F : public EndComponent<F<StoreT>> {
+CREATE_END_COMPONENT_CLASS(F) {
   DECL_PROPS(
     ((int, number))
     ((int, row))
   );
 
 public:
-  F(Props props, StoreT&) : props_(std::move(props)) {
+  END_COMPONENT_WILL_MOUNT(F) {
     logger() << "F constructor";
   }
 
@@ -29,12 +28,11 @@ public:
   void componentWillUpdate(const Props&) {}
 };
 
-template <typename StoreT>
-class E : public EndComponent<E<StoreT>> {
+CREATE_END_COMPONENT_CLASS(E) {
   DECL_PROPS();
 
 public:
-  E(Props props, StoreT&) : props_{std::move(props)} {
+  END_COMPONENT_WILL_MOUNT(E) {
     logger() << "E constructor";
   }
 
@@ -45,8 +43,7 @@ public:
   void componentWillUpdate(const Props&) {}
 };
 
-template <typename StoreT>
-class D : public Component<StoreT> {
+CREATE_COMPONENT_CLASS(D) {
   DECL_PROPS(
     ((int, number))
   );
@@ -58,15 +55,14 @@ class D : public Component<StoreT> {
   }
 
 public:
-  D(Props props, StoreT& store) : Component<StoreT>{store}, props_{std::move(props)} {
+  COMPONENT_WILL_MOUNT(D) {
     logger() << "D constructor";
   }
 
   void componentWillUpdate(const Props&) {}
 };
 
-template <typename StoreT>
-class C : public Component<StoreT> {
+CREATE_COMPONENT_CLASS(C) {
   DECL_PROPS(
     ((int, number))
   );
@@ -86,7 +82,7 @@ class C : public Component<StoreT> {
   }
 
 public:
-  C(Props props, StoreT& store) : Component<StoreT>{store}, props_{std::move(props)} {
+  COMPONENT_WILL_MOUNT(C) {
     logger() << "C constructor";
   }
 

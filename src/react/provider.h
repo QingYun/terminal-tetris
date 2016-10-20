@@ -56,7 +56,6 @@ public:
     using CT = C<StoreT>;
     using State = typename StoreT::StateType;
 
-    // details::ShouldExit<ExitPredicates...> should_exit{std::forward<ExitPredicates>(exit_predicates)...};
     store.addListener([this, should_exit{details::ShouldExit<ExitPredicates...>{std::forward<ExitPredicates>(exit_predicates)...}}] (const State&, const State& next_state) {
       if (should_exit.shouldExit(next_state)) {
         exit_();

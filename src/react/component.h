@@ -29,6 +29,7 @@ public:
 
 namespace details { template <typename T> class ComponentAccessor; }
 
+// base class for all non-endpoint components
 template <typename StoreT>
 class Component : public ComponentBase {
 public:
@@ -39,6 +40,7 @@ private:
   std::unique_ptr<ComponentBase> node_;
 
   void present_(Canvas& canvas, bool parent_updated) {
+    // only components handle present, so just forward the call
     node_->present(canvas, parent_updated || updated_);
   }
 public:
@@ -46,10 +48,13 @@ public:
   friend class details::ComponentAccessor<StoreType>;
 };
 
+// base class for all endpoint components
 template <typename T>
 class EndComponent : public ComponentBase {
 private:
   void render_() {
+    // endpoint components do not render new components,
+    // so just render children passed to it
     T* self = dynamic_cast<T*>(this);
     for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
       pc->render();
@@ -93,6 +98,8 @@ std::unique_ptr<ComponentBase> createComponent(typename ChildT::Props next_props
   return std::unique_ptr<ComponentBase>(target.release());
 }
 
+// container for child component
+// child components are only rendered when we really need it
 class ComponentHolder : public ComponentBase {
 public:
   // try to update component's props.
@@ -123,6 +130,7 @@ private:
   StoreT& store_;
 
   void render_() override {
+    // actually create the component in the first rendering
     if (!component_) {
       calculateNextProps(nullptr);
       component_ = createComponent<ChildT>(std::move(next_props_), store_);
@@ -147,6 +155,7 @@ public:
   }
 };
 
+// provide access to private members of a component
 template <typename T>
 class ComponentAccessor {
 private:
@@ -163,6 +172,7 @@ public:
   T& getStore() const { return pc_->store_; }
 };
 
+// handler of component property update
 template <typename T>
 class ComponentRendererHelper {
 public:
@@ -193,6 +203,8 @@ public:
   }
 };
 
+// set or update a component's render result
+// should be only used in component.render()
 template <typename ChildT, typename StoreT>
 class ComponentRenderer {
 private:
@@ -222,6 +234,7 @@ public:
   }
 };
 
+// add child holders to a component rendered by ComponentRenderer
 template <typename ChildT, typename StoreT>
 class ChildRenderer {
 private:
@@ -257,6 +270,8 @@ public:
   }
 };
 
+// similar to ChildRenderer, but only for forwarding existing
+// child holders, which is in most cases props.children
 template <typename VecT>
 class ArrayRenderer {
 private:
@@ -334,3 +349,15 @@ ArrayRenderer<VecT> createArrayRender(Children& next_children, VecT&& components
   BOOST_PP_EMPTY)))(__VA_ARGS__)
 
 #define NO_CHILDREN do { (void)trivial_creator; (void)next_children; } while(0);
+
+#define CREATE_COMPONENT_CLASS(cname) \
+  template <typename StoreT> class cname : public Component<StoreT>
+
+#define CREATE_END_COMPONENT_CLASS(cname) \
+  template <typename StoreT> class cname : public EndComponent<cname<StoreT>>
+
+#define COMPONENT_WILL_MOUNT(cname) \
+  cname(Props props, StoreT& store) : Component<StoreT>{store}, props_{std::move(props)}
+
+#define END_COMPONENT_WILL_MOUNT(cname) \
+  cname(Props props, StoreT&) : props_{std::move(props)}
