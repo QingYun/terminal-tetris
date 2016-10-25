@@ -22,7 +22,7 @@ template <typename T, T V> class EnumValue {};
   static StateField reduce() { return StateField{}; }
 #define INIT_REDUCER(...) \
   template <typename...> class BOOST_PP_VARIADIC_ELEM(0, __VA_ARGS__); \
-  template <> class BOOST_PP_VARIADIC_ELEM(0, __VA_ARGS__)<ACTION(details::StoreAction::INIT)> { \
+  template <> class BOOST_PP_VARIADIC_ELEM(0, __VA_ARGS__)<ACTION(details::BuiltinAction::InitStore)> { \
   public: \
     template <typename StateField> \
     BOOST_PP_IF(BOOST_PP_EQUAL(2, BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)), \
@@ -40,3 +40,19 @@ template <typename T, T V> class EnumValue {};
       static auto reduce BOOST_PP_VARIADIC_ELEM(1, __VA_ARGS__), \
       DEFAULT_PASS_REDUCER) \
   }
+
+namespace details {
+  
+PASS_REDUCER(windowWidthReducer);
+INIT_REDUCER(windowWidthReducer);
+REDUCER(windowWidthReducer, (BuiltinAction::UpdateWindowWidth), (int, int new_width) {
+  return new_width;
+});
+
+PASS_REDUCER(windowHeightReducer);
+INIT_REDUCER(windowHeightReducer);
+REDUCER(windowHeightReducer, (BuiltinAction::UpdateWindowHeight), (int, int new_height) {
+  return new_height;
+});
+
+}

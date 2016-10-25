@@ -1,5 +1,6 @@
 #pragma once
 #include <unordered_map>
+#include <functional>
 #include "./provider.h"
 #include "../termbox/termbox.h"
 #include "./canvas.h"
@@ -26,6 +27,7 @@ private:
   using EventHandler = void(Termbox::*)(const tb_event&);
   TermboxCanvas canvas_;
   bool should_exit_;
+  std::function<void(int)> updateWindowWidth_, updateWindowHeight_;
   std::unordered_map<int, EventHandler> event_handlers_;
 
   void render_(ComponentPointer root_elm) override;
@@ -35,8 +37,30 @@ private:
   void handleResize_(const tb_event& ev);
 
 public:
-  // tb_init() + tb_select_output_mode()
-  Termbox(int output_mode = TB_OUTPUT_256);
+  template <typename Store>
+  Termbox(Store& store, int output_mode = TB_OUTPUT_256) : canvas_{}, should_exit_{false}, 
+    updateWindowWidth_{[&store] (int width) { 
+      store.template dispatch<ACTION(details::BuiltinAction::UpdateWindowWidth)>(width); 
+    }},
+    updateWindowHeight_{[&store] (int height) { 
+      store.template dispatch<ACTION(details::BuiltinAction::UpdateWindowHeight)>(height); 
+    }},
+    event_handlers_{
+      {TB_EVENT_KEY, &Termbox::handleKey_}, 
+      {TB_EVENT_MOUSE, &Termbox::handleMouse_}, 
+      {TB_EVENT_RESIZE, &Termbox::handleResize_}
+    } {
+    int ret = tb_init();
+    if (ret) {
+      // -2 in VS Code debugger
+      logger() << "tb_init() failed with error code " << ret;
+    }
+    tb_clear();
+    tb_select_output_mode(output_mode);
+    updateWindowWidth_(tb_width());
+    updateWindowHeight_(tb_height());
+  }
+
   ~Termbox();
 
   Canvas& getCanvas() override;

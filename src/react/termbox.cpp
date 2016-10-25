@@ -1,9 +1,11 @@
 #include <memory>
 #include <chrono>
 #include "../termbox/termbox.h"
+#include "../utils/logger.h"
 #include "./termbox.h"
 #include "./component.h"
-#include "../utils/logger.h"
+#include "./store.h"
+#include "./action.h"
 
 TermboxCanvas::TermboxCanvas() {}
 
@@ -26,19 +28,6 @@ void TermboxCanvas::setCell(int x, int y, uint32_t ch, uint16_t fg, uint16_t bg)
 
 void TermboxCanvas::present() {
   tb_present();
-}
-
-Termbox::Termbox(int output_mode) : canvas_{}, should_exit_{false}, event_handlers_{
-  {TB_EVENT_KEY, &Termbox::handleKey_}, 
-  {TB_EVENT_MOUSE, &Termbox::handleMouse_}, 
-  {TB_EVENT_RESIZE, &Termbox::handleResize_}} {
-  int ret = tb_init();
-  if (ret) {
-    // -2 in VS Code debugger
-    logger() << "tb_init() failed with error code " << ret;
-  }
-  tb_clear();
-  tb_select_output_mode(output_mode);
 }
 
 Termbox::~Termbox() {
@@ -65,7 +54,9 @@ void Termbox::handleKey_(const tb_event& evt) {
 void Termbox::handleMouse_(const tb_event&) {
 }
 
-void Termbox::handleResize_(const tb_event&) {
+void Termbox::handleResize_(const tb_event& evt) {
+  updateWindowWidth_(evt.w);
+  updateWindowHeight_(evt.h);
 }
 
 void Termbox::runMainLoop(std::chrono::microseconds frame_duration) {

@@ -53,7 +53,7 @@ public:
   virtual void runMainLoop(std::chrono::microseconds frame_duration = std::chrono::microseconds{16667}) = 0;
 
   template <template <typename> typename C, typename StoreT, typename... ExitPredicates>
-  void render(StoreT& store,ExitPredicates&&... exit_predicates) {
+  void render(StoreT& store, ExitPredicates&&... exit_predicates) {
     using CT = C<StoreT>;
     using State = typename StoreT::StateType;
 

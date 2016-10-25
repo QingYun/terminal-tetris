@@ -13,6 +13,12 @@ public:
   using Type = EnumValue<T, V>;
 };
   
+enum class BuiltinAction {
+  InitStore,
+  UpdateWindowWidth,
+  UpdateWindowHeight
+};
+
 }
 
 #define ACTION_OP(s, d, field) \

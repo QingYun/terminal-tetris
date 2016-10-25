@@ -91,13 +91,14 @@ public:
 CREATE_COMPONENT_CLASS(C) {
   DECL_PROPS(
     (int, number)
+    (int, windowArea)
   );
 
   void render_() override {
     logger() << "C render " << PROPS(number);
     RENDER_COMPONENT(D, ATTRIBUTES((number, PROPS(number) * 2))) {
       RENDER_COMPONENT(F, "F1", ATTRIBUTES(
-        (number, PROPS(number) % 2 == 0 ? 2 : 1)
+        (number, PROPS(windowArea))
         (row, 1)
       )) { NO_CHILDREN };
       RENDER_COMPONENT(F, "F2", ATTRIBUTES(
@@ -109,7 +110,9 @@ CREATE_COMPONENT_CLASS(C) {
   
   MAP_STATE_TO_PROPS(
     (number, STATE_FIELD(number1) + STATE_FIELD(number2))
+    (windowArea, STATE_FIELD(window_width) * STATE_FIELD(window_height))
   )
+
 public:
   COMPONENT_WILL_MOUNT(C) {
     logger() << "C constructor";
@@ -159,8 +162,8 @@ DECL_STORE(Store,
 
 int main() {
   Logger::init(Logger::createTerminal());
-  Termbox tb{TB_OUTPUT_NORMAL};
   Store store;
+  Termbox tb{store, TB_OUTPUT_NORMAL};
 
   tb.render<C>(store,
     EXIT_COND { return STORE_FIELD(number1) + STORE_FIELD(number2) > 99; },

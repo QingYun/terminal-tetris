@@ -3,15 +3,12 @@
 #include <boost/preprocessor/tuple.hpp>
 #include <boost/preprocessor/variadic.hpp>
 #include "../utils/immutable-struct.hpp"
+#include "./action.h"
 #include "./reducer.h"
 
 namespace details {
 
-enum class StoreAction {
-  INIT
-};
-
-using InitStore = EnumValue<StoreAction, StoreAction::INIT>;
+using InitStore = EnumValue<BuiltinAction, BuiltinAction::InitStore>;
 
 }
 
@@ -35,23 +32,26 @@ using InitStore = EnumValue<StoreAction, StoreAction::INIT>;
 #define STATE_REDUCERS(fields) \
   BOOST_PP_SEQ_FOR_EACH(STATE_REDUCERS_OP, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(fields))
 
+#define STORE_ADD_BUILTIN_FIELDS(fields) \
+  fields(int, window_height, details::windowHeightReducer)(int, window_width, details::windowWidthReducer)
+
 // fields = ((field_type, field_name, field_reducer)(...)...)
 #define DECL_STORE(classname, fields) \
   class classname { \
   public: \
-    DECL_STATE(fields); \
+    DECL_STATE(STORE_ADD_BUILTIN_FIELDS(fields)); \
     using Listener = std::function<void(const StateType&, const StateType&)>; \
   private: \
     StateType state_; \
     std::vector<Listener> listeners_; \
   public: \
-    classname() : state_{STATE_INIT(fields)} {} \
+    classname() : state_{STATE_INIT(STORE_ADD_BUILTIN_FIELDS(fields))} {} \
     template <StateType::Field F> \
     auto get() const { return state_.get<F>(); } \
     template <typename... Vs, typename... Ts> \
     void dispatch(const Ts&... payload) { \
       StateType next_state = state_; \
-      STATE_REDUCERS(fields) \
+      STATE_REDUCERS(STORE_ADD_BUILTIN_FIELDS(fields)) \
       if (next_state != state_) { \
         for (auto& listener : listeners_) { \
           listener(state_, next_state); \
