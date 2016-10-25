@@ -1,6 +1,7 @@
 #pragma once
 #include <boost/preprocessor/seq.hpp>
 #include <boost/preprocessor/tuple.hpp>
+#include <boost/preprocessor/variadic.hpp>
 #include "../utils/immutable-struct.hpp"
 #include "./reducer.h"
 
@@ -16,11 +17,14 @@ using InitStore = EnumValue<StoreAction, StoreAction::INIT>;
 
 #define DECL_STATE_OP(s, d, tuple) BOOST_PP_TUPLE_POP_BACK(tuple)
 #define DECL_STATE(fields) \
-  IMMUTABLE_STRUCT(StateType, BOOST_PP_SEQ_TRANSFORM(DECL_STATE_OP, _, fields))
+  IMMUTABLE_STRUCT(StateType, \
+    BOOST_PP_SEQ_TRANSFORM(DECL_STATE_OP, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(fields)))
 
 #define STATE_INIT_OP(s, d, tuple) \
   BOOST_PP_TUPLE_ELEM(2, tuple)<details::InitStore>::reduce<BOOST_PP_TUPLE_ELEM(0, tuple)>()
-#define STATE_INIT(fields) BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(STATE_INIT_OP, _, fields))
+#define STATE_INIT(fields) \
+  BOOST_PP_SEQ_ENUM( \
+    BOOST_PP_SEQ_TRANSFORM(STATE_INIT_OP, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(fields)))
 
 #define STATE_REDUCERS_OP(s, _, field) \
   next_state.template update<StateType::Field::BOOST_PP_TUPLE_ELEM(1, field)>( \
@@ -29,7 +33,7 @@ using InitStore = EnumValue<StoreAction, StoreAction::INIT>;
   );
 // generate state updating statements
 #define STATE_REDUCERS(fields) \
-  BOOST_PP_SEQ_FOR_EACH(STATE_REDUCERS_OP, _, fields)
+  BOOST_PP_SEQ_FOR_EACH(STATE_REDUCERS_OP, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(fields))
 
 // fields = ((field_type, field_name, field_reducer)(...)...)
 #define DECL_STORE(classname, fields) \

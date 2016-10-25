@@ -6,7 +6,9 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
-
+#include <boost/preprocessor/seq.hpp>
+#include <boost/preprocessor/tuple.hpp>
+#include <boost/preprocessor/variadic.hpp>
 #include "../utils/immutable-struct.hpp"
 #include "./canvas.h"
 #include "./action.h"
@@ -303,13 +305,12 @@ using ComponentPointer = std::unique_ptr<details::ComponentBase>;
 
 #define DECL_PROPS(fields) \
   public: \
-    IMMUTABLE_STRUCT(Props, BOOST_PP_SEQ_PUSH_BACK(fields, (details::Children, children))); \
+    IMMUTABLE_STRUCT(Props, BOOST_PP_SEQ_PUSH_BACK(BOOST_PP_VARIADIC_SEQ_TO_SEQ(fields), \
+                                                  (details::Children, children))); \
     const Props& getProps() const { return props_; } \
     void setProps(Props next_props) { props_ = ::std::move(next_props); } \
   private: \
     Props props_
-
-#define PROPS(field) this->getProps().template get<Props::Field::field>()
 
 #define __DETAILS_CHILDREN_CREATOR_NAME(C) BOOST_PP_CAT(__, BOOST_PP_CAT(C, BOOST_PP_CAT(__LINE__, CHILDREN_CREATOR__)))
 #define __DETAILS_COMPONENT_RENDERER_NAME(C) BOOST_PP_CAT(__, BOOST_PP_CAT(C, BOOST_PP_CAT(__LINE__, COMPONENT_RENDERER__)))
@@ -324,7 +325,9 @@ using ComponentPointer = std::unique_ptr<details::ComponentBase>;
 #define __DETAILS_EMPTY_PROPS_UPDATER(attr) [] (auto props) { return props; }
 
 #define ATTRIBUTES(attr) \
-  BOOST_PP_IF(BOOST_PP_SEQ_SIZE(attr), __DETAILS_PROPS_UPDATER, __DETAILS_EMPTY_PROPS_UPDATER)(attr) \
+  BOOST_PP_IF(BOOST_PP_SEQ_SIZE(BOOST_PP_VARIADIC_SEQ_TO_SEQ(attr)), \
+    __DETAILS_PROPS_UPDATER, \
+    __DETAILS_EMPTY_PROPS_UPDATER)(BOOST_PP_VARIADIC_SEQ_TO_SEQ(attr)) \
 
 #define RENDER_MAIN_COMPONENT(C, attr) \
   details::ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \
@@ -368,4 +371,5 @@ using ComponentPointer = std::unique_ptr<details::ComponentBase>;
   cname(Props props, StoreT&) : props_{std::move(props)} {} \
   void componentWillMount()
 
+#define PROPS(field) this->getProps().template get<Props::Field::field>()
 #define DISPATCH(...) this->store_.template dispatch<ACTION(__VA_ARGS__)>

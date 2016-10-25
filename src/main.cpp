@@ -28,8 +28,8 @@ enum class Target {
 
 CREATE_END_COMPONENT_CLASS(F) {
   DECL_PROPS(
-    ((int, number))
-    ((int, row))
+    (int, number)
+    (int, row)
   );
 
 public:
@@ -61,7 +61,7 @@ public:
 
 CREATE_COMPONENT_CLASS(D) {
   DECL_PROPS(
-    ((int, number))
+    (int, number)
   );
 
   void render_() {
@@ -80,19 +80,19 @@ public:
 
 CREATE_COMPONENT_CLASS(C) {
   DECL_PROPS(
-    ((int, number))
+    (int, number)
   );
 
   void render_() {
     logger() << "C render " << PROPS(number);
-    RENDER_COMPONENT(D, ATTRIBUTES(((number, PROPS(number) * 2)))) {
+    RENDER_COMPONENT(D, ATTRIBUTES((number, PROPS(number) * 2))) {
       RENDER_COMPONENT(F, "F1", ATTRIBUTES(
-        ((number, PROPS(number) % 2 == 0 ? 2 : 1))
-        ((row, 1))
+        (number, PROPS(number) % 2 == 0 ? 2 : 1)
+        (row, 1)
       )) { NO_CHILDREN };
       RENDER_COMPONENT(F, "F2", ATTRIBUTES(
-        ((number, PROPS(number)))
-        ((row, 2))
+        (number, PROPS(number))
+        (row, 2)
       )) { NO_CHILDREN };
     };
   }
@@ -136,8 +136,8 @@ REDUCER(number2Reducer, (Action::INCREASE_NUMBER), (int state) {
 });
 
 DECL_STORE(Store,
-  ((int, number1, number1Reducer))
-  ((int, number2, number2Reducer))
+  (int, number1, number1Reducer)
+  (int, number2, number2Reducer)
 );
 
 int main() {
