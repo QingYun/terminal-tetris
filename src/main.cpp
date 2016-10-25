@@ -5,6 +5,7 @@
 #include "./utils/immutable-struct.hpp"
 #include "./react/component.h"
 #include "./react/termbox.h"
+#include "./react/store.h"
 
 #include <cstring>
 
@@ -90,10 +91,6 @@ public:
 
 template <typename T, T V> class EnumValue {};
 
-IMMUTABLE_STRUCT(State,
-  ((int, number1))
-  ((int, number2))
-);
 
 enum class Action {
   INIT,
@@ -173,54 +170,30 @@ public:
 template <>
 class number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER>> : public number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER2>> {};
 
-template <typename StateT>
-class Store {
-public:
   using Listener = std::function<void(const StateT&, const StateT&)>;
   using StateType = StateT;
 
-private:
-  StateT state_;
-  std::vector<Listener> listeners_;
-public:
-  Store() : state_{number1Reducer<EnumValue<Action, Action::INIT>>::reduce(), number2Reducer<EnumValue<Action, Action::INIT>>::reduce()} {}
 
-  template <typename... Vs, typename... Ts>
-  void dispatch(const Ts&... payload) {
-    StateT next_state = state_;
-    next_state.template update<StateT::Field::number1>(
-      number1Reducer<Vs...>::reduce(state_.template get<StateT::Field::number1>(), payload...));
-    next_state.template update<StateT::Field::number2>(
-      number2Reducer<Vs...>::reduce(state_.template get<StateT::Field::number2>(), payload...));
-
-    if (next_state != state_) {
-      for (auto& listener : listeners_) {
-        listener(state_, next_state);
-      }
-    }
-    state_ = std::move(next_state);
-  }
-
-  void addListener(Listener listener, bool immediate_call = true) {
-    if (immediate_call) listener(state_, state_);
-    listeners_.push_back(std::move(listener));
-  }
-};
+DECL_STORE(Store,
+  ((int, number1, number1Reducer))
+  ((int, number2, number2Reducer))
+);
 
 int main() {
   Logger::init(Logger::createTerminal());
   Termbox tb{TB_OUTPUT_NORMAL};
-  Store<State> store;
+  Store store;
+  using State = Store::StateType;
 
-  std::function<void(const State&, C<Store<State>>&)> updater =
-  [] (const State& state, C<Store<State>>& root_elm) {
+  std::function<void(const State&, C<Store>&)> updater =
+  [] (const State& state, C<Store>& root_elm) {
       auto next_props = root_elm.getProps();
-      next_props.update<C<Store<State>>::Props::Field::number>(
+      next_props.update<C<Store>::Props::Field::number>(
         state.get<State::Field::number1>() + state.get<State::Field::number2>()
       );
       if (next_props != root_elm.getProps()) {
         logger() << "rendering root";
-        details::renderComponent<C<Store<State>>>(root_elm, std::move(next_props));
+        details::renderComponent<C<Store>>(root_elm, std::move(next_props));
       }
     };
 
