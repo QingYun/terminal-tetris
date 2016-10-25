@@ -107,16 +107,17 @@ CREATE_COMPONENT_CLASS(C) {
     };
   }
   
-  void onStoreUpdate() override {
+  void onStoreUpdate_(const void *next_state_p) override {
     logger() << "store updated";
-    // auto next_props = getProps();
-    // next_props.update<Props::Field::number>(
-    //   state.get<State::Field::number1>() + state.get<State::Field::number2>()
-    // );
-    // if (next_props != root_elm.getProps()) {
-    //   logger() << "rendering root";
-    //   details::renderComponent<C<Store>>(root_elm, std::move(next_props));
-    // }
+    auto& next_state = *static_cast<const typename std::decay_t<decltype(this->store_)>::StateType*>(next_state_p);
+    Props next_props = getProps();
+    next_props.template update<Props::Field::number>(
+      next_state.template get<std::decay_t<decltype(this->store_)>::StateType::Field::number1>() + 
+      next_state.template get<std::decay_t<decltype(this->store_)>::StateType::Field::number2>()
+    );
+    if (next_props != getProps()) {
+      details::renderComponent<std::decay_t<decltype(*this)>>(*this, std::move(next_props));
+    }
   }
 
 public:
@@ -170,21 +171,8 @@ int main() {
   Logger::init(Logger::createTerminal());
   Termbox tb{TB_OUTPUT_NORMAL};
   Store store;
-  using State = Store::StateType;
 
-  std::function<void(const State&, C<Store>&)> updater =
-  [] (const State& state, C<Store>& root_elm) {
-      auto next_props = root_elm.getProps();
-      next_props.update<C<Store>::Props::Field::number>(
-        state.get<State::Field::number1>() + state.get<State::Field::number2>()
-      );
-      if (next_props != root_elm.getProps()) {
-        logger() << "rendering root";
-        details::renderComponent<C<Store>>(root_elm, std::move(next_props));
-      }
-    };
-
-  tb.render<C>(store, updater,
+  tb.render<C>(store,
     EXIT_COND { return STORE_FIELD(number1) + STORE_FIELD(number2) > 99; },
     EXIT_COND { return STORE_FIELD(number1) < 0; }
   );

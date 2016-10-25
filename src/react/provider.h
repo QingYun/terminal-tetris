@@ -53,9 +53,7 @@ public:
   virtual void runMainLoop(std::chrono::microseconds frame_duration = std::chrono::microseconds{16667}) = 0;
 
   template <template <typename> typename C, typename StoreT, typename... ExitPredicates>
-  void render(StoreT& store,
-              std::function<void(const typename StoreT::StateType&, C<StoreT>&)> component_updater,
-              ExitPredicates&&... exit_predicates) {
+  void render(StoreT& store,ExitPredicates&&... exit_predicates) {
     using CT = C<StoreT>;
     using State = typename StoreT::StateType;
 
@@ -68,13 +66,9 @@ public:
       }
     );
 
-    store.addListener(
-      [this, component_updater{std::move(component_updater)}]
-      (const State&, const State& next_state) {
-        component_updater(next_state, *dynamic_cast<C<StoreT>*>(getRootElm_().get()));
-      },
-      false
-    );
+    store.addListener([this] (const State&, const State& next_state) {
+      dynamic_cast<C<StoreT>*>(getRootElm_().get())->onStoreUpdate(static_cast<const void*>(&next_state));
+    }, false);
 
     render_(details::createComponent<CT>(typename CT::Props{}, store));
   }
