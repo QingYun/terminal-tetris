@@ -95,6 +95,7 @@ void renderComponent(ComponentBase& component, typename T::Props next_props) {
 template <typename ChildT, typename StoreT>
 std::unique_ptr<ComponentBase> createComponent(typename ChildT::Props next_props, StoreT& store) {
   auto target = std::make_unique<ChildT>(std::move(next_props), store);
+  target->componentWillMount();
   target->render();
   return std::unique_ptr<ComponentBase>(target.release());
 }
