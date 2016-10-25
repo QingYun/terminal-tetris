@@ -107,19 +107,9 @@ CREATE_COMPONENT_CLASS(C) {
     };
   }
   
-  void onStoreUpdate_(const void *next_state_p) override {
-    logger() << "store updated";
-    auto& next_state = *static_cast<const typename std::decay_t<decltype(this->store_)>::StateType*>(next_state_p);
-    Props next_props = getProps();
-    next_props.template update<Props::Field::number>(
-      next_state.template get<std::decay_t<decltype(this->store_)>::StateType::Field::number1>() + 
-      next_state.template get<std::decay_t<decltype(this->store_)>::StateType::Field::number2>()
-    );
-    if (next_props != getProps()) {
-      details::renderComponent<std::decay_t<decltype(*this)>>(*this, std::move(next_props));
-    }
-  }
-
+  MAP_STATE_TO_PROPS(
+    (number, STATE_FIELD(number1) + STATE_FIELD(number2))
+  )
 public:
   COMPONENT_WILL_MOUNT(C) {
     logger() << "C constructor";

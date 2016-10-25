@@ -416,6 +416,20 @@ using ComponentPointer = std::unique_ptr<details::ComponentBase>;
 #define END_COMPONENT_WILL_MOUNT(cname) \
   cname(Props props, StoreT&) : props_{std::move(props)} {} \
   void componentWillMount()
+  
+#define STATE_FIELD(F) next_state.template get<std::decay_t<decltype(this->store_)>::StateType::Field::F>()
+
+#define MAP_STATE_TO_PROPS_OP(s, d, tuple) \
+  next_props.template update<Props::Field::BOOST_PP_TUPLE_ELEM(0, tuple)>(BOOST_PP_TUPLE_ELEM(1, tuple));
+// updaters: (props_field, expr)(...)...
+#define MAP_STATE_TO_PROPS(updaters) void onStoreUpdate_(const void *next_state_p) override { \
+    auto& next_state = *static_cast<const typename std::decay_t<decltype(this->store_)>::StateType*>(next_state_p); \
+    Props next_props = getProps(); \
+    BOOST_PP_SEQ_FOR_EACH(MAP_STATE_TO_PROPS_OP, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(updaters)) \
+    if (next_props != getProps()) { \
+      details::renderComponent<std::decay_t<decltype(*this)>>(*this, std::move(next_props)); \
+    } \
+  }
 
 #define PROPS(field) this->getProps().template get<Props::Field::field>()
 #define DISPATCH(...) this->store_.template dispatch<ACTION(__VA_ARGS__)>
