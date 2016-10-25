@@ -93,7 +93,7 @@ CREATE_COMPONENT_CLASS(C) {
     (int, number)
   );
 
-  void render_() {
+  void render_() override {
     logger() << "C render " << PROPS(number);
     RENDER_COMPONENT(D, ATTRIBUTES((number, PROPS(number) * 2))) {
       RENDER_COMPONENT(F, "F1", ATTRIBUTES(
@@ -105,6 +105,18 @@ CREATE_COMPONENT_CLASS(C) {
         (row, 2)
       )) { NO_CHILDREN };
     };
+  }
+  
+  void onStoreUpdate() override {
+    logger() << "store updated";
+    // auto next_props = getProps();
+    // next_props.update<Props::Field::number>(
+    //   state.get<State::Field::number1>() + state.get<State::Field::number2>()
+    // );
+    // if (next_props != root_elm.getProps()) {
+    //   logger() << "rendering root";
+    //   details::renderComponent<C<Store>>(root_elm, std::move(next_props));
+    // }
   }
 
 public:
@@ -173,9 +185,9 @@ int main() {
     };
 
   tb.render<C>(store, updater,
-    [] (const State& state) {
-      return state.get<State::Field::number1>() + state.get<State::Field::number2>() > 99;
-    });
+    EXIT_COND { return STORE_FIELD(number1) + STORE_FIELD(number2) > 99; },
+    EXIT_COND { return STORE_FIELD(number1) < 0; }
+  );
 
   store.dispatch<ACTION(Action::SET_NUMBER2)>(1);
   store.dispatch<ACTION(Action::SET, Target::NUMBER1)>(10);

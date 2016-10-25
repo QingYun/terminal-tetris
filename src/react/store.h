@@ -46,6 +46,8 @@ using InitStore = EnumValue<StoreAction, StoreAction::INIT>;
     std::vector<Listener> listeners_; \
   public: \
     classname() : state_{STATE_INIT(fields)} {} \
+    template <StateType::Field F> \
+    auto get() const { return state_.get<F>(); } \
     template <typename... Vs, typename... Ts> \
     void dispatch(const Ts&... payload) { \
       StateType next_state = state_; \

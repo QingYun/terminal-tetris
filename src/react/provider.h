@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <chrono>
+#include <type_traits>
 #include "./canvas.h"
 #include "./component.h"
 #include "../utils/logger.h"
@@ -78,3 +79,7 @@ public:
     render_(details::createComponent<CT>(typename CT::Props{}, store));
   }
 };
+
+
+#define EXIT_COND [] (const auto& __state) -> bool
+#define STORE_FIELD(F) __state.template get<std::decay_t<decltype(__state)>::Field::F>()

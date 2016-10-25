@@ -32,6 +32,7 @@ public:
   // draw on canvas. Decide whether to actually draw something based on this->updated_ and parent_updated
   void present(Canvas& canvas, bool parent_updated);
   virtual void onKeyPress(const Event& evt) = 0;
+  virtual void onStoreUpdate() = 0;
 };
 
 template <typename T> class ComponentAccessor;
@@ -48,6 +49,10 @@ private:
 
   // does nothing by default, custom component can override it to react to events
   virtual void onKeyPress_(const Event&) {};
+
+  // does nothing by default, custom component may override it to update its props
+  virtual void onStoreUpdate_() {}
+
   void present_(Canvas& canvas, bool parent_updated) {
     // only components handle present, so just forward the call
     node_->present(canvas, parent_updated || updated_);
@@ -58,6 +63,11 @@ public:
   void onKeyPress(const Event& evt) override {
     onKeyPress_(evt);
     node_->onKeyPress(evt);
+  }
+  
+  void onStoreUpdate() override {
+    onStoreUpdate();
+    node_->onStoreUpdate();
   }
   
   friend class details::ComponentAccessor<StoreType>;
@@ -96,6 +106,14 @@ public:
     T* self = dynamic_cast<T*>(this);
     for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
       pc->onKeyPress(evt);
+    }
+  }
+  
+  void onStoreUpdate() override {
+    // endpoint components do not update their props from the store directly, just pass the event down
+    T* self = dynamic_cast<T*>(this);
+    for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
+      pc->onStoreUpdate();
     }
   }
 };
@@ -179,6 +197,10 @@ public:
   
   void onKeyPress(const Event& evt) override {
     component_->onKeyPress(evt);
+  }
+  
+  void onStoreUpdate() override {
+    component_->onStoreUpdate();
   }
 };
 
