@@ -6,9 +6,25 @@
 #include "./react/component.h"
 #include "./react/termbox.h"
 #include "./react/store.h"
+#include "./react/reducer.h"
+#include "./react/action.h"
 
 #include <cstring>
 
+enum class Action {
+  INIT,
+  SET_NUMBER1,
+  INCREASE_NUMBER1,
+  SET_NUMBER2,
+  INCREASE_NUMBER2,
+  INCREASE_NUMBER,
+  SET
+};
+
+enum class Target {
+  NUMBER1,
+  NUMBER2
+};
 
 CREATE_END_COMPONENT_CLASS(F) {
   DECL_PROPS(
@@ -89,90 +105,35 @@ public:
   void componentWillUpdate(const Props&) {}
 };
 
-template <typename T, T V> class EnumValue {};
+REDUCER(number1Reducer, (Action::SET)(Target::NUMBER1), (int, int payload) {
+  return payload;
+});
 
+PASS_REDUCER(number1Reducer, (int state, ...) { return state; });
+REDUCER(number1Reducer, (Action::INCREASE_NUMBER1), (int state) {
+  return state + 1;
+});
 
-enum class Action {
-  INIT,
-  SET_NUMBER1,
-  INCREASE_NUMBER1,
-  SET_NUMBER2,
-  INCREASE_NUMBER2,
-  INCREASE_NUMBER,
-  SET
-};
+REDUCER(number1Reducer, (Action::INCREASE_NUMBER), (int state) {
+  return state + 1;
+});
+INIT_REDUCER(number1Reducer, () { return 0; });
 
-enum class Target {
-  NUMBER1,
-  NUMBER2
-};
+INIT_REDUCER(number2Reducer);
 
-template <typename...>
-class number1Reducer {
-public:
-  static int reduce(int state, ...) { return state; }
-};
+REDUCER(number2Reducer, (Action::SET_NUMBER2), (int, int payload) {
+  return payload;
+});
 
-template <>
-class number1Reducer<EnumValue<decltype(Action::INIT), Action::INIT>> {
-public:
-  static int reduce() { return 0; }
-};
+PASS_REDUCER(number2Reducer);
 
-template <>
-class number1Reducer<EnumValue<decltype(Action::SET), Action::SET>, EnumValue<Target, Target::NUMBER1>> {
-public:
-  static int reduce(int, int payload) {
-    return payload;
-  }
-};
+REDUCER(number2Reducer, (Action::INCREASE_NUMBER2), (int state) {
+  return state + 1;
+});
 
-template <>
-class number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER1), Action::INCREASE_NUMBER1>> {
-public:
-  static int reduce(int state) {
-    return state + 1;
-  }
-};
-
-template <>
-class number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER), Action::INCREASE_NUMBER>> :
-  public number1Reducer<EnumValue<decltype(Action::INCREASE_NUMBER1), Action::INCREASE_NUMBER1>> {};
-
-template <typename...>
-class number2Reducer {
-public:
-  static int reduce(int state, ...) { return state; }
-};
-
-template <>
-class number2Reducer<EnumValue<Action, Action::INIT>> {
-public:
-  static int reduce() { return 0; }
-};
-
-template <>
-class number2Reducer<EnumValue<Action, Action::SET_NUMBER2>> {
-public:
-  static int reduce(int, int payload) {
-    return payload;
-  }
-};
-
-template <>
-class number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER2>> {
-public:
-  static int reduce(int state) {
-    return state + 1;
-  }
-};
-
-template <>
-class number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER>> : public number2Reducer<EnumValue<Action, Action::INCREASE_NUMBER2>> {};
-
-  using Listener = std::function<void(const StateT&, const StateT&)>;
-  using StateType = StateT;
-
+REDUCER(number2Reducer, (Action::INCREASE_NUMBER), (int state) {
+  return state + 1;
+});
 
 DECL_STORE(Store,
   ((int, number1, number1Reducer))
