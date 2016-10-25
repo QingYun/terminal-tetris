@@ -12,6 +12,7 @@
 #include "../utils/immutable-struct.hpp"
 #include "./canvas.h"
 #include "./action.h"
+#include "./event.h"
 
 namespace details {
 
@@ -30,6 +31,7 @@ public:
   void render();
   // draw on canvas. Decide whether to actually draw something based on this->updated_ and parent_updated
   void present(Canvas& canvas, bool parent_updated);
+  virtual void onKeyPress(const Event& evt) = 0;
 };
 
 template <typename T> class ComponentAccessor;
@@ -44,12 +46,20 @@ private:
   std::size_t node_type_;
   std::unique_ptr<ComponentBase> node_;
 
+  // does nothing by default, custom component can override it to react to events
+  virtual void onKeyPress_(const Event&) {};
   void present_(Canvas& canvas, bool parent_updated) {
     // only components handle present, so just forward the call
     node_->present(canvas, parent_updated || updated_);
   }
 public:
   Component(StoreT& store) : store_(store) {}
+  
+  void onKeyPress(const Event& evt) override {
+    onKeyPress_(evt);
+    node_->onKeyPress(evt);
+  }
+  
   friend class details::ComponentAccessor<StoreType>;
 };
 
@@ -57,7 +67,7 @@ public:
 template <typename T>
 class EndComponent : public ComponentBase {
 private:
-  void render_() {
+  void render_() override {
     // endpoint components do not render new components,
     // so just render children passed to it
     T* self = dynamic_cast<T*>(this);
@@ -66,7 +76,7 @@ private:
     }
   }
 
-  void present_(Canvas& canvas, bool parent_updated) {
+  void present_(Canvas& canvas, bool parent_updated) override {
     T* self = dynamic_cast<T*>(this);
     bool should_redraw = parent_updated || updated_;
 
@@ -77,6 +87,15 @@ private:
 
     for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
       pc->present(canvas, should_redraw);
+    }
+  }
+  
+public:
+  void onKeyPress(const Event& evt) override {
+    // endpoint components do not react to events directly, just pass it down
+    T* self = dynamic_cast<T*>(this);
+    for (auto& pc : self->getProps().template get<T::Props::Field::children>()) {
+      pc->onKeyPress(evt);
     }
   }
 };
@@ -156,6 +175,10 @@ public:
 
   void setNextProps(typename ChildT::Props next_props) {
     next_props_ = std::move(next_props);
+  }
+  
+  void onKeyPress(const Event& evt) override {
+    component_->onKeyPress(evt);
   }
 };
 

@@ -28,7 +28,10 @@ void TermboxCanvas::present() {
   tb_present();
 }
 
-Termbox::Termbox(int output_mode) : canvas_{}, should_exit_{false} {
+Termbox::Termbox(int output_mode) : canvas_{}, should_exit_{false}, event_handlers_{
+  {TB_EVENT_KEY, &Termbox::handleKey_}, 
+  {TB_EVENT_MOUSE, &Termbox::handleMouse_}, 
+  {TB_EVENT_RESIZE, &Termbox::handleResize_}} {
   int ret = tb_init();
   if (ret) {
     // -2 in VS Code debugger
@@ -55,8 +58,14 @@ void Termbox::exit_() {
   should_exit_ = true;
 }
 
-void Termbox::handleEvent_(int event_type, const tb_event& ev) {
-  logger() << event_type;
+void Termbox::handleKey_(const tb_event& evt) {
+  getRootElm_()->onKeyPress(evt);
+}
+
+void Termbox::handleMouse_(const tb_event&) {
+}
+
+void Termbox::handleResize_(const tb_event&) {
 }
 
 void Termbox::runMainLoop(std::chrono::microseconds frame_duration) {
@@ -67,7 +76,8 @@ void Termbox::runMainLoop(std::chrono::microseconds frame_duration) {
   auto& canvas = getCanvas();
   while (!should_exit_) {
     auto start_time = high_resolution_clock::now();
-    getRootElm_()->present(canvas, false);
+    canvas.clear();
+    getRootElm_()->present(canvas, true);
     canvas.present();
     do {
       us us_elapsed = duration_cast<us>(high_resolution_clock::now() - start_time);
@@ -76,7 +86,7 @@ void Termbox::runMainLoop(std::chrono::microseconds frame_duration) {
       ms ms_to_wait = duration_cast<ms>(frame_duration - us_elapsed);
       int event_type = tb_peek_event(&ev, ms_to_wait.count());
       if (event_type > 0) {
-        handleEvent_(event_type, ev);
+        (this->*event_handlers_[event_type])(ev);
       } else if (event_type == -1) {
         logger() << "An error occured in tb_peek_event";
       }

@@ -1,4 +1,5 @@
 #pragma once
+#include <unordered_map>
 #include "./provider.h"
 #include "../termbox/termbox.h"
 #include "./canvas.h"
@@ -22,12 +23,16 @@ public:
 
 class Termbox : public Provider {
 private:
+  using EventHandler = void(Termbox::*)(const tb_event&);
   TermboxCanvas canvas_;
   bool should_exit_;
+  std::unordered_map<int, EventHandler> event_handlers_;
 
   void render_(ComponentPointer root_elm) override;
   void exit_() override;
-  void handleEvent_(int event_type, const tb_event& ev);
+  void handleKey_(const tb_event& ev);
+  void handleMouse_(const tb_event& ev);
+  void handleResize_(const tb_event& ev);
 
 public:
   // tb_init() + tb_select_output_mode()

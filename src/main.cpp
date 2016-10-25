@@ -15,6 +15,7 @@ enum class Action {
   INIT,
   SET_NUMBER1,
   INCREASE_NUMBER1,
+  DECREASE_NUMBER1,
   SET_NUMBER2,
   INCREASE_NUMBER2,
   INCREASE_NUMBER,
@@ -69,6 +70,15 @@ CREATE_COMPONENT_CLASS(D) {
       RENDER_COMPONENT(PROPS(children));
     };
   }
+  
+  void onKeyPress(const Event& evt) {
+    if (evt.key == TB_KEY_ARROW_LEFT) {
+      DISPATCH(Action::DECREASE_NUMBER1)();
+    }
+    if (evt.key == TB_KEY_ARROW_RIGHT) {
+      DISPATCH(Action::INCREASE_NUMBER1)();
+    }
+  }
 
 public:
   COMPONENT_WILL_MOUNT(D) {
@@ -112,6 +122,10 @@ REDUCER(number1Reducer, (Action::SET)(Target::NUMBER1), (int, int payload) {
 PASS_REDUCER(number1Reducer, (int state, ...) { return state; });
 REDUCER(number1Reducer, (Action::INCREASE_NUMBER1), (int state) {
   return state + 1;
+});
+
+REDUCER(number1Reducer, (Action::DECREASE_NUMBER1), (int state) {
+  return state - 1;
 });
 
 REDUCER(number1Reducer, (Action::INCREASE_NUMBER), (int state) {
