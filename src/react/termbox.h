@@ -25,7 +25,7 @@ private:
   TermboxCanvas canvas_;
   bool should_exit_;
 
-  void render_(std::unique_ptr<ComponentBase> root_elm) override;
+  void render_(ComponentPointer root_elm) override;
   void exit_() override;
   void handleEvent_(int event_type, const tb_event& ev);
 

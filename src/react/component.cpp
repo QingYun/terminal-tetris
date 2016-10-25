@@ -1,6 +1,8 @@
 #include "./component.h"
 #include "../utils/logger.h"
 
+namespace details {
+
 ComponentBase::~ComponentBase() {}
 
 void ComponentBase::render() {
@@ -12,8 +14,6 @@ void ComponentBase::present(Canvas& canvas, bool parent_updated) {
   present_(canvas, parent_updated);
   updated_ = false;
 }
-
-namespace details {
 
 ComponentHolder::ComponentHolder(std::string id, std::size_t type_hash, Updater updater)
 : id_(id), component_type_hash_(type_hash), updater_(updater) {}

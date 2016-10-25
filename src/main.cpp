@@ -8,7 +8,6 @@
 
 #include <cstring>
 
-using namespace details;
 
 CREATE_END_COMPONENT_CLASS(F) {
   DECL_PROPS(

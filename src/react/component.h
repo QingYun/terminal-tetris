@@ -9,6 +9,7 @@
 
 #include "../utils/immutable-struct.hpp"
 #include "./canvas.h"
+namespace details {
 
 class ComponentBase {
 private:
@@ -27,7 +28,7 @@ public:
   void present(Canvas& canvas, bool parent_updated);
 };
 
-namespace details { template <typename T> class ComponentAccessor; }
+template <typename T> class ComponentAccessor;
 
 // base class for all non-endpoint components
 template <typename StoreT>
@@ -75,8 +76,6 @@ private:
     }
   }
 };
-
-namespace details {
 
 class ComponentHolder;
 using Child = std::shared_ptr<ComponentHolder>;
@@ -297,9 +296,11 @@ ArrayRenderer<VecT> createArrayRender(Children& next_children, VecT&& components
 
 }
 
+using ComponentPointer = std::unique_ptr<details::ComponentBase>;
+
 #define DECL_PROPS(fields) \
   public: \
-    IMMUTABLE_STRUCT(Props, BOOST_PP_SEQ_PUSH_BACK(fields, (Children, children))); \
+    IMMUTABLE_STRUCT(Props, BOOST_PP_SEQ_PUSH_BACK(fields, (details::Children, children))); \
     const Props& getProps() const { return props_; } \
     void setProps(Props next_props) { props_ = ::std::move(next_props); } \
   private: \
@@ -323,20 +324,20 @@ ArrayRenderer<VecT> createArrayRender(Children& next_children, VecT&& components
   BOOST_PP_IF(BOOST_PP_SEQ_SIZE(attr), __DETAILS_PROPS_UPDATER, __DETAILS_EMPTY_PROPS_UPDATER)(attr) \
 
 #define RENDER_MAIN_COMPONENT(C, attr) \
-  ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \
+  details::ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \
   details::ComponentRenderer<C<StoreT>, StoreT> __DETAILS_COMPONENT_RENDERER_NAME(C) { \
     this, __DETAILS_CHILDREN_CREATOR_NAME(C), attr \
   }; \
-  __DETAILS_CHILDREN_CREATOR_NAME(C) = [this] (bool *trivial_creator, Children *next_children)
+  __DETAILS_CHILDREN_CREATOR_NAME(C) = [this] (bool *trivial_creator, details::Children *next_children)
 
 #define RENDER_CHILD_COMPONENT(C, id, attr) \
   if (*trivial_creator) { *trivial_creator = false; return; } \
-  ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \
+  details::ChildrenCreator __DETAILS_CHILDREN_CREATOR_NAME(C); \
   details::ChildRenderer<C<StoreT>, StoreT> __DETAILS_COMPONENT_RENDERER_NAME(C) { \
     id, *next_children, __DETAILS_CHILDREN_CREATOR_NAME(C), attr, \
     details::ComponentAccessor<StoreT>{this}.getStore() \
   }; \
-  __DETAILS_CHILDREN_CREATOR_NAME(C) = [this] (bool *trivial_creator, Children *next_children)
+  __DETAILS_CHILDREN_CREATOR_NAME(C) = [this] (bool *trivial_creator, details::Children *next_children)
 
 #define RENDER_COMPONENT_ARRAY(arr) \
   if (*trivial_creator) { *trivial_creator = false; return; } \
@@ -351,13 +352,15 @@ ArrayRenderer<VecT> createArrayRender(Children& next_children, VecT&& components
 #define NO_CHILDREN do { (void)trivial_creator; (void)next_children; } while(0);
 
 #define CREATE_COMPONENT_CLASS(cname) \
-  template <typename StoreT> class cname : public Component<StoreT>
+  template <typename StoreT> class cname : public details::Component<StoreT>
 
 #define CREATE_END_COMPONENT_CLASS(cname) \
-  template <typename StoreT> class cname : public EndComponent<cname<StoreT>>
+  template <typename StoreT> class cname : public details::EndComponent<cname<StoreT>>
 
 #define COMPONENT_WILL_MOUNT(cname) \
-  cname(Props props, StoreT& store) : Component<StoreT>{store}, props_{std::move(props)}
+  cname(Props props, StoreT& store) : details::Component<StoreT>{store}, props_{std::move(props)} {} \
+  void componentWillMount()
 
 #define END_COMPONENT_WILL_MOUNT(cname) \
-  cname(Props props, StoreT&) : props_{std::move(props)}
+  cname(Props props, StoreT&) : props_{std::move(props)} {} \
+  void componentWillMount()

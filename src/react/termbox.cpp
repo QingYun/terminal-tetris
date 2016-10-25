@@ -46,7 +46,7 @@ Canvas& Termbox::getCanvas() {
   return canvas_;
 }
 
-void Termbox::render_(std::unique_ptr<ComponentBase> root_elm) {
+void Termbox::render_(ComponentPointer root_elm) {
   setRootElm_(std::move(root_elm));
 }
 
