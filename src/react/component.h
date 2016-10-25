@@ -9,6 +9,8 @@
 
 #include "../utils/immutable-struct.hpp"
 #include "./canvas.h"
+#include "./action.h"
+
 namespace details {
 
 class ComponentBase {
@@ -33,10 +35,10 @@ template <typename T> class ComponentAccessor;
 // base class for all non-endpoint components
 template <typename StoreT>
 class Component : public ComponentBase {
-public:
+protected:
   using StoreType = StoreT;
-private:
   StoreType& store_;
+private:
   std::size_t node_type_;
   std::unique_ptr<ComponentBase> node_;
 
@@ -364,3 +366,5 @@ using ComponentPointer = std::unique_ptr<details::ComponentBase>;
 #define END_COMPONENT_WILL_MOUNT(cname) \
   cname(Props props, StoreT&) : props_{std::move(props)} {} \
   void componentWillMount()
+
+#define DISPATCH(...) this->store_.template dispatch<ACTION(__VA_ARGS__)>

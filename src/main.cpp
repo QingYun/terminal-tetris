@@ -202,11 +202,11 @@ int main() {
       return state.get<State::Field::number1>() + state.get<State::Field::number2>() > 99;
     });
 
-  store.dispatch<EnumValue<decltype(Action::SET_NUMBER2), Action::SET_NUMBER2>>(1);
-  store.dispatch<EnumValue<Action, Action::SET>, EnumValue<Target, Target::NUMBER1>>(10);
-  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER1>>();
-  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER2>>();
-  store.dispatch<EnumValue<Action, Action::INCREASE_NUMBER>>();
+  store.dispatch<ACTION(Action::SET_NUMBER2)>(1);
+  store.dispatch<ACTION(Action::SET, Target::NUMBER1)>(10);
+  store.dispatch<ACTION(Action::INCREASE_NUMBER1)>();
+  store.dispatch<ACTION(Action::INCREASE_NUMBER2)>();
+  store.dispatch<ACTION(Action::INCREASE_NUMBER)>();
 
   tb.runMainLoop();
 }
